@@ -1,5 +1,7 @@
-# audio-classifier-keras-cnn
-Audio Classifier in Keras using Convolutional Neural Network
+# Panotti
+Stereo Audio Classifier in Keras 
+
+This is a stereo version of my `audio-classifier-keras-cnn` repo. See that.
 
 *ok this is a public repo, but it's not ready for public distribution.  Just letting a few students & colleagues know about it for now.
 Wrote the main code Monday night, got the results Tuesday morning, added the augmentation Wednesday night (for future use)...now posting this repo on Thursday.*

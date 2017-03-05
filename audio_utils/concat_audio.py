@@ -3,7 +3,7 @@ concat_audio.py
 Author: Scott Hawley
 
 Joins a bunch of audio files into one big file.
-Filename of output is whatever the last filename is + "_L"
+Filename of output is whatever the last filename is + "_L" (for "long")
 
 Works on mono, stereo,...arbitrary numbers of channels
 
@@ -22,13 +22,11 @@ def main(args):
 		if os.path.isfile(infile):
 			print("Input file: ",infile,"... ",end="",sep="")
 			signal, sr = librosa.load(infile, sr=None, mono=False)   # don't assume sr or mono
-			channels = signal.ndim    
-			axis = channels - 1
-			if (1 == channels):
+			if (1 == signal.ndim):
 				print("this is a mono file.  signal.shape = ",signal.shape)
 			else:
 				print("this is a multi-channel file: signal.shape = ",signal.shape)
-
+			axis = signal.ndim - 1
 
 			if (1 == count):
 				long_clip = signal

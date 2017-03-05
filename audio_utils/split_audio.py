@@ -9,7 +9,7 @@ counts the clip number
 Works on mono, stereo,...arbitrary numbers of channels
 
 If the sound file duration is not an integer multiple of clip_dur, then it will
-generate the "last piece" padded with zeros on the end 
+generate the "last piece" padded with zeros on the end (so all clips have the same duration)
 '''
 from __future__ import print_function
 
@@ -21,14 +21,15 @@ def fix_last_element(clip_list, axis):
 	full_length = clip_list[0].shape[axis]
 	last_length = clip_list[-1].shape[axis]
 	num_zeros = full_length - last_length
-	ndims = clip_list[-1].ndim
-	pad_list = []
-	for i in range(ndims):
-		if (axis == i):
-			pad_list.append((0,num_zeros))
-		else:
-			pad_list.append((0,0))
-	clip_list[-1] = np.pad( clip_list[-1], pad_list, mode='constant')
+	if (num_zeros > 0):
+		ndims = clip_list[-1].ndim
+		pad_list = []
+		for i in range(ndims):
+			if (axis == i):
+				pad_list.append((0,num_zeros))
+			else:
+				pad_list.append((0,0))
+		clip_list[-1] = np.pad( clip_list[-1], pad_list, mode='constant')
 
 	clips = np.asarray( clip_list )
 	return clips
@@ -40,12 +41,11 @@ def main(args):
 		if os.path.isfile(infile):
 			print("Input file: ",infile,"... ",end="",sep="")
 			signal, sr = librosa.load(infile, sr=None, mono=False)   # don't assume sr or mono
-			channels = signal.ndim     
-			if (1 == channels):
+			if (1 == signal.ndim):
 				print("this is a mono file.  signal.shape = ",signal.shape)
 			else:
 				print("this is a multi-channel file: signal.shape = ",signal.shape)
-			axis = channels - 1
+			axis = signal.ndim - 1
 			stride = args.clip_dur * sr  							# length of clip in samples
 			indices = np.arange(stride,signal.shape[axis],stride)	# where to split
 			clip_list = np.split( signal, indices, axis=axis)		# do the splitting

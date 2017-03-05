@@ -116,22 +116,19 @@ def build_datasets(train_percentage=0.8, preproc=True):
             #start = timer()
             if (preproc):
               melgram = np.load(audio_path)
+              print("melgram.shape = ",melgram.shape)
               sr = 44100
             else:
-              aud, sr = librosa.load(audio_path, mono=(1==channels),sr=None)
-              melgram = librosa.logamplitude(librosa.feature.melspectrogram(aud, sr=sr, n_mels=96),ref_power=1.0)[np.newaxis,np.newaxis,:,:]
-            #end = timer()
-            #print("time = ",end - start) 
-            if (idx2 < n_train):
+                raise(" You should preprocess first")
+
+            if (idx2 < n_train):                   # Training dataset
                 X_train[train_count,:,:] = melgram
                 Y_train[train_count,:] = this_Y
-                paths_train.append(audio_path)     # list-appending is still fast. (??)
+                paths_train.append(audio_path)     
                 train_count += 1
             else:
-                X_test[test_count,:,:] = melgram
+                X_test[test_count,:,:] = melgram    # Testing dataset
                 Y_test[test_count,:] = this_Y
-                #X_test = np.concatenate((X_test, melgram), axis=0)
-                #Y_test = np.concatenate((Y_test, this_Y), axis=0)
                 paths_test.append(audio_path)
                 test_count += 1
         print("")

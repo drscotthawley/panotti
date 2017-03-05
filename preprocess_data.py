@@ -4,18 +4,16 @@ from __future__ import print_function
 Preprocess audio
 '''
 import numpy as np
+from panotti.datautils import *
 import librosa
 import librosa.display
 import os
 
-def get_class_names(path="Samples/"):  # class names are subdirectory names in Samples/ directory
-    class_names = os.listdir(path)
-    return class_names
 
 def preprocess_dataset(inpath="Samples/", outpath="Preproc/"):
 
     if not os.path.exists(outpath):
-        os.mkdir( outpath, 0755 );   # make a new directory for preproc'd files
+        os.mkdir( outpath );   # make a new directory for preproc'd files
 
     class_names = get_class_names(path=inpath)   # get the names of the subdirectories
     nb_classes = len(class_names)
@@ -23,7 +21,7 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/"):
     for idx, classname in enumerate(class_names):   # go through the subdirs
 
         if not os.path.exists(outpath+classname):
-            os.mkdir( outpath+classname, 0755 );   # make a new subdirectory for preproc class
+            os.mkdir( outpath+classname );   # make a new subdirectory for preproc class
 
         class_files = os.listdir(inpath+classname)
         n_files = len(class_files)
@@ -35,11 +33,25 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/"):
         for idx2, infilename in enumerate(class_files):
             audio_path = inpath + classname + '/' + infilename
             if (0 == idx2 % printevery):
-                print('\r Loading class: {:14s} ({:2d} of {:2d} classes)'.format(classname,idx+1,nb_classes),
+                print('\r     Loading class: {:14s} ({:2d} of {:2d} classes)'.format(classname,idx+1,nb_classes),
                        ", file ",idx2+1," of ",n_load,": ",audio_path,sep="")
-            #start = timer()
-            aud, sr = librosa.load(audio_path, sr=None)
-            melgram = librosa.logamplitude(librosa.feature.melspectrogram(aud, sr=sr, n_mels=96),ref_power=1.0)[np.newaxis,np.newaxis,:,:]
+            aud, sr = librosa.load(audio_path, sr=None)    # read file
+
+            # make mono file into "1-dim multichannel"
+            if (aud.ndim == 1):
+                aud = np.reshape( aud, (1,aud.shape[0]))
+
+            # get mel-spectrogram for each channel, and layer them into multi-dim array
+            for channel in range(aud.shape[0]):
+                melgram = librosa.logamplitude(librosa.feature.melspectrogram(aud[channel], 
+                    sr=sr, n_mels=96),ref_power=1.0)[np.newaxis,np.newaxis,:,:]
+                #print("     melgram.shape = ",melgram.shape)
+                #layer = np.reshape( melgram, (1,melgram.shape[0],melgram.shape[1]))
+                if (0 == channel):
+                    layers = melgram
+                else:
+                    layers = np.append(layers,layer,axis=0)
+            #print("                layers.shape = ",layers.shape)
             outfile = outpath + classname + '/' + infilename+'.npy'
             np.save(outfile,melgram)
 

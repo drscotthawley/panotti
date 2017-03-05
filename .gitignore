@@ -1,2 +1,4 @@
 Samples/*
 Preproc
+__pycache__
+*.pyc

@@ -13,8 +13,8 @@ Trained using Fraunhofer IDMT's database of monophonic guitar effects,
 
 import numpy as np
 import librosa
-import p_models 
-from p_datautils import *
+from panotti.models import *
+from panotti.datautils import *
 from keras.callbacks import ModelCheckpoint
 import os
 from os.path import isfile
@@ -31,7 +31,7 @@ if __name__ == '__main__':
     X_train, Y_train, paths_train, X_test, Y_test, paths_test, class_names, sr = build_datasets(preproc=True)
 
     # make the model
-    model = p_models.dumbCNN(X_train,Y_train, nb_classes=len(class_names), channels=channels)
+    model = dumbCNN(X_train,Y_train, nb_classes=len(class_names), channels=channels)
     model.compile(loss='categorical_crossentropy',
               optimizer='adadelta',
               metrics=['accuracy'])

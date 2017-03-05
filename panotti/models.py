@@ -18,11 +18,14 @@ from keras.layers.advanced_activations import ELU
 
 
 ''' 
-dumbCNN:  This is kind of a mixture of Keun Woo Choi's code https://github.com/keunwoochoi/music-auto_tagging-keras
-   and the MNIST classifier at https://github.com/fchollet/keras/blob/master/examples/mnist_cnn.py
-  Uses same kernel, filters and pool size for everything
+dumbCNN:  This is kind of a mixture of a dumbed-down versoin of Keun Woo Choi's 
+    compact CNN model  (https://github.com/keunwoochoi/music-auto_tagging-keras)
+    and the Keras MNIST classifier example
+            (https://github.com/fchollet/keras/blob/master/examples/mnist_cnn.py)
+
+    Uses same kernel, filters and pool size for everything
 '''
-def dumbCNN(X,Y,nb_classes,nb_layers=4,channels=1):
+def dumbCNN(X, Y, nb_classes, nb_layers=4, channels=1):
     nb_filters = 32  # number of convolutional filters = "feature maps"
     kernel_size = (3, 3)  # convolution kernel size
     pool_size = (2, 2)  # size of pooling area for max pooling

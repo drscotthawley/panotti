@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 '''
 binauralify.py
 Send a mono file to a bunch of stereo files of binaural audio, for various source locations/angles

@@ -56,19 +56,19 @@ def encode_class(class_name, class_names):  # makes a "one-hot" vector for each 
 def decode_class(vec, class_names):  # generates a number from the one-hot vector
     return int(np.argmax(vec))
 
-
-def shuffle_XY_paths(X,Y,paths):   # generates a randomized order, keeping X&Y(&paths) together
-    assert (X.shape[0] == Y.shape[0] )
-    idx = np.array(range(Y.shape[0]))
-    np.random.shuffle(idx)
-    newX = np.copy(X)
-    newY = np.copy(Y)
-    newpaths = paths
-    for i in range(len(idx)):
-        newX[i] = X[idx[i],:,:]
-        newY[i] = Y[idx[i],:]
-        newpaths[i] = paths[idx[i]]
-    return newX, newY, newpaths
+# don't need this if we just shuffle each directory listing
+#def shuffle_XY_paths(X,Y,paths):   # generates a randomized order, keeping X&Y(&paths) together
+#    assert (X.shape[0] == Y.shape[0] )
+#    idx = np.array(range(Y.shape[0]))
+#    np.random.shuffle(idx)
+#    newX = np.copy(X)
+#    newY = np.copy(Y)
+#    newpaths = paths
+#    for i in range(len(idx)):
+#        newX[i] = X[idx[i],:,:]
+#        newY[i] = Y[idx[i],:]
+#        newpaths[i] = paths[idx[i]]
+#    return newX, newY, newpaths
 
 
 '''
@@ -111,8 +111,10 @@ def build_datasets(train_percentage=0.8, preproc=True):
         n_load =  n_files
         n_train = int(train_percentage * n_load)
         printevery = 100
-        print("")
-        for idx2, infilename in enumerate(class_files[0:n_load]):          
+
+        file_list = class_files[0:n_load]
+        np.random.shuffle(file_list)   # shuffle directory listing (e.g. to avoid alphabetic order)
+        for idx2, infilename in enumerate(file_list):          
             audio_path = path + classname + '/' + infilename
             if (0 == idx2 % printevery):
                 print('\r Loading class: {:14s} ({:2d} of {:2d} classes)'.format(classname,idx+1,nb_classes),
@@ -137,9 +139,9 @@ def build_datasets(train_percentage=0.8, preproc=True):
                 test_count += 1
         #print("")
 
-    print("Shuffling order of data...")
-    X_train, Y_train, paths_train = shuffle_XY_paths(X_train, Y_train, paths_train)
-    X_test, Y_test, paths_test = shuffle_XY_paths(X_test, Y_test, paths_test)
+ #   print("Shuffling order of data...")
+ #   X_train, Y_train, paths_train = shuffle_XY_paths(X_train, Y_train, paths_train)
+ #   X_test, Y_test, paths_test = shuffle_XY_paths(X_test, Y_test, paths_test)
 
     return X_train, Y_train, paths_train, X_test, Y_test, paths_test, class_names, sr
 

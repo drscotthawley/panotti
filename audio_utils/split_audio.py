@@ -1,3 +1,4 @@
+#! /usr/bin/env python
 '''
 split_audio.py
 Author: Scott Hawley

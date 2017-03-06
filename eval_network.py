@@ -29,7 +29,7 @@ if __name__ == '__main__':
     X_train, Y_train, paths_train, X_test, Y_test, paths_test, class_names, sr = build_datasets(preproc=True)
 
     # make the model
-    model = dumbCNN(X_train,Y_train, nb_classes=len(class_names))
+    model = dumbCNN(X_train,Y_train, nb_classes=len(class_names),nb_layers=4)
     model.compile(loss='categorical_crossentropy',
               optimizer='adadelta',
               metrics=['accuracy'])

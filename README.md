@@ -1,14 +1,11 @@
 # Panotti
 Stereo Audio Classifier in Keras 
 
-This is a stereo version of my `audio-classifier-keras-cnn` repo. See that.
+![Panotti_IMG](https://upload.wikimedia.org/wikipedia/commons/a/af/Panoteanen.jpg)
 
-*ok this is a public repo, but it's not ready for public distribution.  Just letting a few students & colleagues know about it for now.
-Wrote the main code Monday night, got the results Tuesday morning, added the augmentation Wednesday night (for future use)...now posting this repo on Thursday.*
+This is a version of my [audio-classifier-keras-cnn](https://github.com/drscotthawley/audio-classifier-keras-cnn) repo.  Please refer to that.
 
-**Credits:** This is an amalgamation of the [Keras MNIST CNN example](https://github.com/fchollet/keras/blob/master/examples/mnist_cnn.py) and [@keunwoochoi](https://github.com/keunwoochoi)'s [CNN Music Tagger](https://github.com/keunwoochoi/music-auto_tagging-keras) -- I would truly say my code is just a "dumbed-down rip-off" of Choi's work (just not his exact code because it was too clever for me).  In particular, like in Choi's work, it uses mel-spectrograms as inputs, and a multi-layer CNN with Batch Normalization and ELU activations. (Although ReLU seems to work just as well as ELU on the data I've tried so far.) Unlike Choi's work, the network uses the same kernel size for all layers (that's part of the "dumbed down" nature of the code, but it still works), the melgram-shape of the network input is not hardcoded and adapts to whatever the shape (of the first file) is, and I threw in an optional thing for data augmentation which may come in handy later.
-
-*(Regarding Batch Normalization: Changing the `batch_size` variable between training and evaluation may not be a good idea.)*
+Different with Panotti is it has been generalized beyond mono audio, to include stereo or even more "channels"
 
 
 ## Dependencies
@@ -39,19 +36,27 @@ Example: for the [IDMT-SMT-Audio-Effects database](https://www.idmt.fraunhofer.d
 For now, it's assumed that all data files have the same length & sample rate.  
 Also, `librosa` is going to turn stereo files into mono by, e.g. averaging the left & right channels. 
 
-*"Is there any sample data that comes with this repo?"  Not right now, sorry.  So the Samples directory 'ships' as empty.*
+*"Is there any sample data that comes with this repo?"*  No, but you could generate some like I did, such as...
+
+    $ sox -r 44.1k -n whitenoise.wav synth 300 pinknoise
+    $ sox -r 44.1k -n brownnoise.wav synth 300 brownnoise
+    $ sox -r 44.1k -n pinknoise.wav synth 300 pinknoise
+    $ sox -r 44.1k -n square1k.wav synth 300 square 1000
+    $ python ~/panotti/audio_utils/binauralify.py 12 *.wav
+    $ python ~/panotti/audio_utils/split_audio.py 2 e0*/*.wav
+    $ mv e0* Samples/ 
+    $ rm -f `ls -1 Samples/e0*/*.wav | grep -v _s`
 
 
 ### Data preprocessing and/or augmentation:
 You don't *have* to preprocess or augment the data.  If you preprocess, the data-loading will go *much* faster (e.g., 100 times faster) the next time you try to train the network. So, preprocess.
 
-The "augmentation" will [vary the speed, pitch, dynamics, etc.](https://bmcfee.github.io/papers/ismir2015_augmentation.pdf) of the sound files ("data") to try to "bootstrap" some extra data with which to train.  It can either be performed *within* the preprocessing step, or you can do it *before* preprocessing as a standalone step (i.e., if you really want to be able to listen to what these augmented datasets sound like). To save disk space, I recommend doing it during preprocessing rather than as a standalone.
-
-If you want to augment first as a standalone, then you'll run it as
+The "augmentation" will [vary the speed, pitch, dynamics, etc.](https://bmcfee.github.io/papers/ismir2015_augmentation.pdf) of the sound files ("data") to try to "bootstrap" some extra data with which to train.  If you want to augment, then you'll run it as
 
 `$ python augment_data.py <N>  Samples/*/*`
 
 where N is how many augmented copies of each file you want it to create.  It will place all of these in the Samples/ directory with some kind of "_augX" appended to the filename (where X just counts the number of the augmented data files).
+*I haven't had great results with the augmentation yet; so for now I don't do it.*
 
 Preprocessing will generate mel-spectrograms of all data files, and create a "new version" of `Samples/` called `Preproc/`, with the same subdirectory names, but all the .wav and .mp3 files will have ".npy" on the end now.
 
@@ -73,6 +78,10 @@ It's set to run for 2000 epochs, feel free to shorten that or just ^C out at som
 After training, more diagnostics -- ROC curves, AUC -- can be obtained by running
 
 `$ python eval_network.py`
+
+*(Changing the `batch_size` variable between training and evaluation may not be a good idea.  It will probably screw up the Batch Normalization...but maybe you'll get luck.)*
+
+
 
 ## Results
 On the [IDMT Audio Effects Database](https://www.idmt.fraunhofer.de/en/business_units/m2d/smt/audio_effects.html) using the 20,000 monophonic guitar samples across 12 effects classes, this code achieved 99.7% accuracy and an AUC of 0.9999. Specifically, 11 mistakes were made out of about 4000 testing examples; 6 of those were for the 'Phaser' effect, 3 were for EQ, a couple elsewhere, and most of the classes had zero mistakes. (No augmentation was used.)

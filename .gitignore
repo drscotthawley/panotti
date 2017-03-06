@@ -1,4 +1,5 @@
-Samples/*
+Samples/*.wav
+Samples/*.mp3
 Preproc
 __pycache__
 *.pyc

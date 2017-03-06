@@ -21,17 +21,15 @@ from os.path import isfile
 from timeit import default_timer as timer
 
 
-channels = 1   #  mono audio
-
-
 if __name__ == '__main__':
     np.random.seed(1)
 
     # get the data
     X_train, Y_train, paths_train, X_test, Y_test, paths_test, class_names, sr = build_datasets(preproc=True)
 
+
     # make the model
-    model = dumbCNN(X_train,Y_train, nb_classes=len(class_names), channels=channels)
+    model = dumbCNN(X_train,Y_train, nb_classes=len(class_names))
     model.compile(loss='categorical_crossentropy',
               optimizer='adadelta',
               metrics=['accuracy'])

@@ -25,14 +25,15 @@ dumbCNN:  This is kind of a mixture of a dumbed-down versoin of Keun Woo Choi's
 
     Uses same kernel, filters and pool size for everything
 '''
-def dumbCNN(X, Y, nb_classes, nb_layers=4, channels=1):
+def dumbCNN(X, Y, nb_classes, nb_layers=4):
     nb_filters = 32  # number of convolutional filters = "feature maps"
     kernel_size = (3, 3)  # convolution kernel size
     pool_size = (2, 2)  # size of pooling area for max pooling
 
-    print(" dumbCNN: X.shape = ",X.shape)
-    input_shape = (channels, X.shape[2], X.shape[3])  # channels = 1 for mono, 2 for stereo
+    channels = X.shape[1]   # channels = 1 for mono, 2 for stereo
 
+    print(" dumbCNN: X.shape = ",X.shape,", channels = ",channels)
+    input_shape = (channels, X.shape[2], X.shape[3])  
     model = Sequential()
     model.add(Convolution2D(nb_filters, kernel_size[0], kernel_size[1],
                         border_mode='valid', input_shape=input_shape))

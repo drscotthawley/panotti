@@ -35,8 +35,8 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/"):
             if (0 == idx2 % printevery):
                 print('\r     Loading class: {:14s} ({:2d} of {:2d} classes)'.format(classname,idx+1,nb_classes),
                        ", file ",idx2+1," of ",n_load,": ",audio_path,sep="")
-            aud, sr = librosa.load(audio_path, sr=None)    # read file
-
+            aud, sr = librosa.load(audio_path, mono=False, sr=None)    # read file, assume nothing
+            #print("             aud.ndim = ",aud.ndim)
             # make mono file into "1-dim multichannel"
             if (aud.ndim == 1):
                 aud = np.reshape( aud, (1,aud.shape[0]))
@@ -50,10 +50,11 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/"):
                 if (0 == channel):
                     layers = melgram
                 else:
-                    layers = np.append(layers,layer,axis=0)
-            #print("                layers.shape = ",layers.shape)
+                    layers = np.append(layers,melgram,axis=1)  # we keep axis=0 free for keras batches
+            if (0 == idx2 % printevery):
+                print("                layers.shape = ",layers.shape)
             outfile = outpath + classname + '/' + infilename+'.npy'
-            np.save(outfile,melgram)
+            np.save(outfile,layers)
 
 if __name__ == '__main__':
     preprocess_dataset()

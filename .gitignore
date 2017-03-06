@@ -2,3 +2,4 @@ Samples/*
 Preproc
 __pycache__
 *.pyc
+*.hdf5

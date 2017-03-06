@@ -6,7 +6,6 @@ p_datautils.py:  Just some routines that we use for moving data around
 
 import numpy as np
 import librosa
-from p_models import *
 import os
 from os.path import isfile
 from timeit import default_timer as timer
@@ -52,6 +51,11 @@ def encode_class(class_name, class_names):  # makes a "one-hot" vector for each 
         return vec
     except ValueError:
         return None
+
+
+def decode_class(vec, class_names):  # generates a number from the one-hot vector
+    return int(np.argmax(vec))
+
 
 def shuffle_XY_paths(X,Y,paths):   # generates a randomized order, keeping X&Y(&paths) together
     assert (X.shape[0] == Y.shape[0] )
@@ -116,7 +120,7 @@ def build_datasets(train_percentage=0.8, preproc=True):
             #start = timer()
             if (preproc):
               melgram = np.load(audio_path)
-              print("melgram.shape = ",melgram.shape)
+              #print("melgram.shape = ",melgram.shape)
               sr = 44100
             else:
                 raise(" You should preprocess first")
@@ -131,7 +135,7 @@ def build_datasets(train_percentage=0.8, preproc=True):
                 Y_test[test_count,:] = this_Y
                 paths_test.append(audio_path)
                 test_count += 1
-        print("")
+        #print("")
 
     print("Shuffling order of data...")
     X_train, Y_train, paths_train = shuffle_XY_paths(X_train, Y_train, paths_train)

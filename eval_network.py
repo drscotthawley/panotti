@@ -16,13 +16,10 @@ import matplotlib.pyplot as plt
 import librosa
 import os
 from os.path import isfile
-import p_models
-from p_datautils import *
+from panotti.models import * 
+from panotti.datautils import *
 from sklearn.metrics import roc_auc_score, roc_curve, auc
 from timeit import default_timer as timer
-
-
-channels = 1   # mono audio
 
 
 if __name__ == '__main__':
@@ -32,7 +29,7 @@ if __name__ == '__main__':
     X_train, Y_train, paths_train, X_test, Y_test, paths_test, class_names, sr = build_datasets(preproc=True)
 
     # make the model
-    model = p_models.dumbCNN(X_train,Y_train, nb_classes=len(class_names))
+    model = dumbCNN(X_train,Y_train, nb_classes=len(class_names))
     model.compile(loss='categorical_crossentropy',
               optimizer='adadelta',
               metrics=['accuracy'])

@@ -11,7 +11,7 @@ import librosa.display
 import os
 
 
-def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0.8):
+def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0.8, resample=True):
 
     trainpath = outpath+"Train/"
     testpath = outpath+"Test/"
@@ -51,7 +51,10 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
                     "\', File ",idx2+1,"/", n_load,": ",audio_path,"                  ", 
                     sep="",end="")
             
-            aud, sr = librosa.load(audio_path, mono=False, sr=None)    # read file, assume nothing
+            sr = None
+            if (resample):
+                sr = 44100
+            aud, sr = librosa.load(audio_path, mono=False, sr=sr)    # read audio file
 
             # make mono file into "1-channel multichannel"
             if (aud.ndim == 1):

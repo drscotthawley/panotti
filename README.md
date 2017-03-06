@@ -36,16 +36,15 @@ Example: for the [IDMT-SMT-Audio-Effects database](https://www.idmt.fraunhofer.d
 For now, it's assumed that all data files have the same length & sample rate.  
 Also, `librosa` is going to turn stereo files into mono by, e.g. averaging the left & right channels. 
 
-*"Is there any sample data that comes with this repo?"*  No, but you could generate some like I did, such as...
+*"Is there any sample data that comes with this repo?"*  No, but you could generate some like I did, such as the following string of unix commands...
 
-    $ sox -r 44.1k -n whitenoise.wav synth 300 pinknoise
-    $ sox -r 44.1k -n brownnoise.wav synth 300 brownnoise
-    $ sox -r 44.1k -n pinknoise.wav synth 300 pinknoise
-    $ sox -r 44.1k -n square1k.wav synth 300 square 1000
-    $ python ~/panotti/audio_utils/binauralify.py 12 *.wav
-    $ python ~/panotti/audio_utils/split_audio.py 2 e0*/*.wav
-    $ mv e0* Samples/ 
-    $ rm -f `ls -1 Samples/e0*/*.wav | grep -v _s`
+     sox -r 44.1k -n whitenoise.wav synth 300 whitenoise
+     sox -r 44.1k -n pinknoise.wav synth 300 pinknoise
+     sox -r 44.1k -n brownnoise.wav synth 300 brownnoise
+     sox -r 44.1k -n square1k.wav synth 300 square 1000
+     python ~/panotti/audio_utils/binauralify.py 12 *.wav
+     python ~/panotti/audio_utils/split_audio.py -r 2 e0*/*.wav
+     mv e0* Samples/ 
 
 
 ### Data preprocessing and/or augmentation:

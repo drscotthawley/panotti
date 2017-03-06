@@ -27,8 +27,11 @@ def train_network():
     # get the data
     X_train, Y_train, paths_train, class_names, sr = build_dataset(path="Preproc/Train/")
     X_test, Y_test, paths_test, class_names_test, sr = build_dataset(path="Preproc/Test/")
-    assert( class_names == class_names_test)
+    assert( class_names == class_names_test )
 
+    #print("class_names      = ",class_names)
+    #print("class_names_test = ",class_names_test)
+    #exit(1)
 
     # make the model
     model = dumbCNN(X_train,Y_train, nb_classes=len(class_names), nb_layers=4)
@@ -55,7 +58,7 @@ def train_network():
 
     # train and score the model
     batch_size = 128
-    nb_epoch = 100
+    nb_epoch = 200
     model.fit(X_train, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
           verbose=1, validation_data=(X_test, Y_test), callbacks=[checkpointer])
     score = model.evaluate(X_test, Y_test, verbose=0)

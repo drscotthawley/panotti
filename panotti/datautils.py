@@ -8,25 +8,29 @@ import os
 from os.path import isfile
 
 
-def get_class_names(path="Preproc/Train/"):     # class names are subdirectory names in Preproc/ directory
-    class_names = os.listdir(path)              # name same order as 'ls', because Python.
+# class names are subdirectory names in Preproc/ directory
+def get_class_names(path="Preproc/Train/", sort=True):
+    if (sort):     
+        class_names = sorted(os.listdir(path))     # sorted alphabetically for consistency with "ls" command
+    else:
+        class_names = os.listdir(path)             # not in same order as "ls", because Python
     return class_names
 
-def get_total_files(path="Preproc/Train/"): 
+
+def get_total_files(class_names, path="Preproc/Train/"): 
     sum_total = 0
-    subdirs = os.listdir(path)
-    for subdir in subdirs:
+    for subdir in class_names:
         files = os.listdir(path+subdir)
         n_files = len(files)
         sum_total += n_files
     return sum_total
 
-def get_sample_dimensions(path='Preproc/Train/'):
-    classname = os.listdir(path)[0]
-    files = os.listdir(path+classname)
-    infilename = files[0]
-    audio_path = path + classname + '/' + infilename
-    melgram = np.load(audio_path)
+
+def get_sample_dimensions(class_names, path='Preproc/Train/'):
+    classname = class_names[0]
+    audio_path = path + classname + '/'
+    infilename = os.listdir(audio_path)[0]
+    melgram = np.load(audio_path+infilename)
     print("   get_sample_dimensions: melgram.shape = ",melgram.shape)
     return melgram.shape
  
@@ -45,28 +49,42 @@ def decode_class(vec, class_names):  # generates a number from the one-hot vecto
     return int(np.argmax(vec))
 
 
+def shuffle_XY_paths(X,Y,paths):   # generates a randomized order, keeping X&Y(&paths) together
+    assert (X.shape[0] == Y.shape[0] )
+    print("shuffle_XY_paths: Y.shape[0], len(paths) = ",Y.shape[0], len(paths))
+    idx = np.array(range(Y.shape[0]))
+    np.random.shuffle(idx)
+    newX = np.copy(X)
+    newY = np.copy(Y)
+    newpaths = paths
+    for i in range(len(idx)):
+        newX[i] = X[idx[i],:,:]
+        newY[i] = Y[idx[i],:]
+        newpaths[i] = paths[idx[i]]
+    return newX, newY, newpaths
+
+
 # can be used for test dataset as well
-def build_dataset(path="Preproc/Train/",shuffle=True, load_frac=1.0):
+def build_dataset(path="Preproc/Train/", load_frac=1.0):
 
     class_names = get_class_names(path=path)
     print("class_names = ",class_names)
-
-    total_files = get_total_files(path=path)
-    print("total files = ",total_files)
-
     nb_classes = len(class_names)
 
+    total_files = get_total_files(class_names, path=path)
     total_load = int(total_files * load_frac)
+    print("total files = ",total_files,", going to load total_load = ",total_load)
 
     # pre-allocate memory for speed (old method used np.concatenate, slow)
-    mel_dims = get_sample_dimensions(path=path)  # Find out the 'shape' of each data file
+    mel_dims = get_sample_dimensions(class_names,path=path)  # get dims of sample data file
     print(" melgram dimensions: ",mel_dims)
     X = np.zeros((total_load, mel_dims[1], mel_dims[2], mel_dims[3]))   
     Y = np.zeros((total_load, nb_classes))  
     paths = []
 
-    count = 0
+    load_count = 0
     for idx, classname in enumerate(class_names):
+        print("")
         this_Y = np.array(encode_class(classname,class_names) )
         this_Y = this_Y[np.newaxis,:]
         class_files = os.listdir(path+classname)
@@ -75,23 +93,26 @@ def build_dataset(path="Preproc/Train/",shuffle=True, load_frac=1.0):
         printevery = 100
 
         file_list = class_files[0:n_load]
-        if (shuffle):                       # preproc already shuffled btw
-            np.random.shuffle(file_list)  
         for idx2, infilename in enumerate(file_list):          
             audio_path = path + classname + '/' + infilename
             if (0 == idx2 % printevery):
-                print(" Loading class ",idx+1,"/",nb_classes,": \'",classname,
+                print("\r Loading class ",idx+1,"/",nb_classes,": \'",classname,
                     "\', File ",idx2+1,"/", n_load,": ",audio_path,"                  ", 
-                    sep="")
+                    sep="",end="")
 
-            
             melgram = np.load(audio_path)
             
             X[count,:,:] = melgram
             Y[count,:] = this_Y
             paths.append(audio_path)     
-            count += 1
- 
+            load_count += 1
+
+    print("")
+    if ( count != total_load ):  # check to make sure we loaded everything we thought we would
+        raise Exception("Loaded "+str(load_count)+" files but was expecting "+str(total_load) )
+
     sr = 44100    # uh...probably shouldn't be hard-coding this. ??
+
+    X, Y, paths = shuffle_XY_paths(X,Y,paths)  # mix up classes, & files within classes
 
     return X, Y, paths, class_names, sr

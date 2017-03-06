@@ -215,17 +215,21 @@ def project_multi(mono_sig, infile, sr, start, end, steps):
     elev_delta = float((elev_end - elev_bgn) / float(steps_elev)) #deg/half-window
     az_delta = float((az_end - az_bgn) / float(steps_az))
 
+    total = steps_elev * steps_az
+
     outpath = "./"
+    count = 0
     for i in range(steps_elev):
         elev = elev_bgn + i * elev_delta
         for j in range(steps_az):
+            count += 1
             az = az_bgn + j * az_delta
 
             stereo_l, stereo_r = project(mono_sig, elev, az)
             stereo_sig = np.vstack( (stereo_l, stereo_r))
 
             # save to file
-            classname = "e"+str(elev)+"a"+str(az)
+            classname = "cl"+str(count).zfill(2)+"-e"+str(elev)+"a"+str(az)
             if not os.path.exists(outpath+classname):
                     os.mkdir( outpath+classname)
             filename_no_ext = os.path.splitext(infile)[0]

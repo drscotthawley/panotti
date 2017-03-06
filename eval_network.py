@@ -22,6 +22,32 @@ from sklearn.metrics import roc_auc_score, roc_curve, auc
 from timeit import default_timer as timer
 
 
+def create(n, constructor=list):   # creates an list of empty lists
+    for _ in xrange(n):
+        yield constructor()
+
+def count_mistakes(y_scores,Y_test,paths_test,class_names):
+    n_classes = len(class_names)
+    mistake_count = np.zeros(n_classes)
+    mistake_log = list(create(n_classes))
+    for i in range(Y_test.shape[0]):
+        pred = decode_class(y_scores[i],class_names)
+        truth = decode_class(Y_test[i],class_names)
+        if (pred != truth):
+            mistake_count[truth] += 1
+            mistake_log[truth].append( paths_test[i]+": should be "+class_names[truth]+
+                " but came out as "+class_names[pred])
+
+    mistakes_sum = int(np.sum(mistake_count))
+    print("    Found",mistakes_sum,"total mistakes out of",Y_test.shape[0],"attempts")
+    print("      Mistakes by class: ")
+    for i in range(n_classes):
+        print("          class \'",class_names[i],"\': ",int(mistake_count[i]), sep="")
+        for j in range(len(mistake_log[i])):
+            print("                  ",mistake_log[i][j])
+    return
+
+
 def eval_network():
     np.random.seed(1)
 
@@ -70,17 +96,7 @@ def eval_network():
     n_classes = len(class_names)
 
     print(" Counting mistakes ")
-    mistakes = np.zeros(n_classes)
-    for i in range(Y_test.shape[0]):
-        pred = decode_class(y_scores[i],class_names)
-        truth = decode_class(Y_test[i],class_names)
-        if (pred != truth):
-            mistakes[truth] += 1
-    mistakes_sum = int(np.sum(mistakes))
-    print("    Found",mistakes_sum,"total mistakes out of",Y_test.shape[0],"attempts")
-    print("      Mistakes by class: ")
-    for i in range(n_classes):
-        print("          class \'",class_names[i],"\': ",int(mistakes[i]), sep="")
+    count_mistakes(y_scores,Y_test,paths_test,class_names)
 
     print("Generating ROC curves...")
     fpr = dict()

@@ -58,7 +58,9 @@ The "augmentation" will [vary the speed, pitch, dynamics, etc.](https://bmcfee.g
 where N is how many augmented copies of each file you want it to create.  It will place all of these in the Samples/ directory with some kind of "_augX" appended to the filename (where X just counts the number of the augmented data files).
 *I haven't had great results with the augmentation yet; so for now I don't do it.*
 
-Preprocessing will generate mel-spectrograms of all data files, and create a "new version" of `Samples/` called `Preproc/`, with the same subdirectory names, but all the .wav and .mp3 files will have ".npy" on the end now.
+Preprocessing will generate mel-spectrograms of all data files, and create a "new version" of `Samples/` called `Preproc/`.
+
+It will do an 80-20 split of the dataset, so within `Preproc/` will be the subdirectories `Train/` and `Test/`. These will have the same subdirectory names as `Samples/`, but all the .wav and .mp3 files will have ".npy" on the end now.  Datafiles will be randomly assigned to `Train/` or `Test/`, and there they shall remain.
 
 To do the preprocessing you just run
 

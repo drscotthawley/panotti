@@ -1,4 +1,4 @@
-from __future__ import print_function
+#! /usr/bin/env python
 
 ''' 
 Classify sounds using database
@@ -10,7 +10,7 @@ This is kind of a mixture of Keun Woo Choi's code https://github.com/keunwoochoi
 Trained using Fraunhofer IDMT's database of monophonic guitar effects, 
    clips were 2 seconds long, sampled at 44100 Hz
 '''
-
+from __future__ import print_function
 import numpy as np
 import librosa
 from panotti.models import *
@@ -21,11 +21,13 @@ from os.path import isfile
 from timeit import default_timer as timer
 
 
-if __name__ == '__main__':
+def train_network():
     np.random.seed(1)
 
     # get the data
-    X_train, Y_train, paths_train, X_test, Y_test, paths_test, class_names, sr = build_datasets(preproc=True)
+    X_train, Y_train, paths_train, class_names, sr = build_dataset(path="Preproc/Train/")
+    X_test, Y_test, paths_test, class_names_test, sr = build_dataset(path="Preproc/Test/")
+    assert( class_names == class_names_test)
 
 
     # make the model
@@ -34,6 +36,7 @@ if __name__ == '__main__':
               optimizer='adadelta',
               metrics=['accuracy'])
     model.summary()
+
 
     # Initialize weights using checkpoint if it exists. (Checkpointing requires h5py)
     load_checkpoint = True
@@ -59,3 +62,6 @@ if __name__ == '__main__':
     print('Test score:', score[0])
     print('Test accuracy:', score[1])
 
+
+if __name__ == '__main__':
+    train_network()

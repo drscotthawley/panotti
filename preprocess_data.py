@@ -1,8 +1,9 @@
-from __future__ import print_function
+#! /usr/bin/env python
 
 ''' 
 Preprocess audio
 '''
+from __future__ import print_function
 import numpy as np
 from panotti.datautils import *
 import librosa
@@ -10,34 +11,49 @@ import librosa.display
 import os
 
 
-def preprocess_dataset(inpath="Samples/", outpath="Preproc/"):
+def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0.8):
 
+    trainpath = outpath+"Train/"
+    testpath = outpath+"Test/"
     if not os.path.exists(outpath):
         os.mkdir( outpath );   # make a new directory for preproc'd files
+        os.mkdir( trainpath );  
+        os.mkdir( testpath );   
+
 
     class_names = get_class_names(path=inpath)   # get the names of the subdirectories
     nb_classes = len(class_names)
-    print("class_names = ",class_names)
+    print("\nclass_names = ",class_names)
     for idx, classname in enumerate(class_names):   # go through the subdirs
+        print("")
 
-        if not os.path.exists(outpath+classname):
-            os.mkdir( outpath+classname );   # make a new subdirectory for preproc class
+        # make new subdirectories for class
+        if not os.path.exists(trainpath+classname):
+            os.mkdir( trainpath+classname );   
+            os.mkdir( testpath+classname );   
 
-        class_files = os.listdir(inpath+classname)
+
+        class_files = os.listdir(inpath+classname)   # all filenames for this class
+        np.random.shuffle(class_files)   # shuffle directory listing (e.g. to avoid alphabetic order)
+
         n_files = len(class_files)
-        n_load = n_files
-        print(' class name = {:14s} - {:3d}'.format(classname,idx),
-            ", ",n_files," files in this class",sep="")
+        n_load = n_files            # sometimes we may multiple by a small # for debugging
+        n_train = int( n_load * train_percentage)
+        #print(", ",n_files," files in this class",sep="")
 
-        printevery = 20
-        for idx2, infilename in enumerate(class_files):
+        printevery = 10
+
+        for idx2, infilename in enumerate(class_files):    # go through all files for this class
             audio_path = inpath + classname + '/' + infilename
+
             if (0 == idx2 % printevery):
-                print('\r     Loading class: {:14s} ({:2d} of {:2d} classes)'.format(classname,idx+1,nb_classes),
-                       ", file ",idx2+1," of ",n_load,": ",audio_path,sep="")
+                print("\r Loading class ",idx+1,"/",nb_classes,": \'",classname,
+                    "\', File ",idx2+1,"/", n_load,": ",audio_path,"                  ", 
+                    sep="",end="")
+            
             aud, sr = librosa.load(audio_path, mono=False, sr=None)    # read file, assume nothing
-            #print("             aud.ndim = ",aud.ndim)
-            # make mono file into "1-dim multichannel"
+
+            # make mono file into "1-channel multichannel"
             if (aud.ndim == 1):
                 aud = np.reshape( aud, (1,aud.shape[0]))
 
@@ -45,18 +61,22 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/"):
             for channel in range(aud.shape[0]):
                 melgram = librosa.logamplitude(librosa.feature.melspectrogram(aud[channel], 
                     sr=sr, n_mels=96),ref_power=1.0)[np.newaxis,np.newaxis,:,:]
-                #print("     melgram.shape = ",melgram.shape)
-                #layer = np.reshape( melgram, (1,melgram.shape[0],melgram.shape[1]))
+
                 if (0 == channel):
                     layers = melgram
                 else:
                     layers = np.append(layers,melgram,axis=1)  # we keep axis=0 free for keras batches
-            if (0 == idx2 % printevery):
-                print("                layers.shape = ",layers.shape)
-            outfile = outpath + classname + '/' + infilename+'.npy'
+
+            if (idx2 >= n_train):
+                outsub = "Test/"
+            else:
+                outsub = "Train/"
+
+            outfile = outpath + outsub + classname + '/' + infilename+'.npy'
             np.save(outfile,layers)
+            
+    print("")
+    return
 
 if __name__ == '__main__':
     preprocess_dataset()
-
-

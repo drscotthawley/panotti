@@ -25,8 +25,8 @@ def train_network():
     np.random.seed(1)
 
     # get the data
-    X_train, Y_train, paths_train, class_names, sr = build_dataset(path="Preproc/Train/")
-    X_test, Y_test, paths_test, class_names_test, sr = build_dataset(path="Preproc/Test/")
+    X_train, Y_train, paths_train, class_names = build_dataset(path="Preproc/Train/")
+    X_test, Y_test, paths_test, class_names_test  = build_dataset(path="Preproc/Test/")
     assert( class_names == class_names_test )
 
     #print("class_names      = ",class_names)

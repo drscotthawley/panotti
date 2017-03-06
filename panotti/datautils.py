@@ -8,12 +8,17 @@ import os
 from os.path import isfile
 
 
+def listdir_nohidden(path):        # ignore hidden files
+    for f in os.listdir(path):
+        if not f.startswith('.'):
+            yield f
+
 # class names are subdirectory names in Preproc/ directory
 def get_class_names(path="Preproc/Train/", sort=True):
     if (sort):     
-        class_names = sorted(os.listdir(path))     # sorted alphabetically for consistency with "ls" command
+        class_names = sorted(listdir_nohidden(path))     # sorted alphabetically for consistency with "ls" command
     else:
-        class_names = os.listdir(path)             # not in same order as "ls", because Python
+        class_names = listdir_nohidden(path)             # not in same order as "ls", because Python
     return class_names
 
 
@@ -31,7 +36,7 @@ def get_sample_dimensions(class_names, path='Preproc/Train/'):
     audio_path = path + classname + '/'
     infilename = os.listdir(audio_path)[0]
     melgram = np.load(audio_path+infilename)
-    print("   get_sample_dimensions: melgram.shape = ",melgram.shape)
+    print("   get_sample_dimensions: "+infilename+": melgram.shape = ",melgram.shape)
     return melgram.shape
  
 
@@ -111,8 +116,6 @@ def build_dataset(path="Preproc/Train/", load_frac=1.0):
     if ( load_count != total_load ):  # check to make sure we loaded everything we thought we would
         raise Exception("Loaded "+str(load_count)+" files but was expecting "+str(total_load) )
 
-    sr = 44100    # uh...probably shouldn't be hard-coding this. ??
-
     X, Y, paths = shuffle_XY_paths(X,Y,paths)  # mix up classes, & files within classes
 
-    return X, Y, paths, class_names, sr
+    return X, Y, paths, class_names

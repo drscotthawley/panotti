@@ -1,17 +1,30 @@
 #! /usr/bin/env python
 
 '''
- Set up the physionet 2016 challenge heart sounds database 
+ Set up the heart sounds database for the physionet 2016 challenge
  See https://www.physionet.org/challenge/2016/
 
- Requirements:  
-    The dataset, which it will try to download from
+Need to fix: Currently -- because it's easier right now -- the validation & training sets get 
+   concatenated, shuffled, and then panotti/preproc does its own 80-20 split off that.
+   Gotta fix that so training stays training, and val stays val. For now see below.
+
+Here's how I run it for now, in light of the above... (copy & paste the following):
+ ./physionet_setup.py
+ ~/panotti/preprocess_data.py
+ mkdir Val
+ mv Preproc/*/*/*validation* Val/
+ mv Preproc/Test/abnormal/* Preproc/Train/abnormal/
+ mv Preproc/Test/normal/* Preproc/Train/normal/
+ mv Val/*abnormal* Preproc/Test/abnormal/
+ mv Val/*normal* Preproc/Test/normal/
+ rmdir Val
+ ~/panotti/train_network.py
+
+
+Requirements:  
+    The dataset, which the program will try to download from (both) the following URLs:
         https://www.physionet.org/physiobank/database/challenge/2016/training.zip
         https://www.physionet.org/physiobank/database/challenge/2016/validation.zip
-
-TODO: Currently -- because it's easier right now -- the validation & training sets get 
-   concatenated, shuffled, and then Panotti does its own 80-20 split off that.
-   Gotta fix that so training stays training, and val stays val
 '''
 
 from __future__ import print_function

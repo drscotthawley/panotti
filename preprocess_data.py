@@ -47,7 +47,7 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
             audio_path = inpath + classname + '/' + infilename
 
             if (0 == idx2 % printevery):
-                print("\r Loading class ",idx+1,"/",nb_classes,": \'",classname,
+                print("\r Processing class ",idx+1,"/",nb_classes,": \'",classname,
                     "\', File ",idx2+1,"/", n_load,": ",audio_path,"                  ", 
                     sep="",end="")
             

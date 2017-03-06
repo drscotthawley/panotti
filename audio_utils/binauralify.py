@@ -33,17 +33,18 @@ def download_hrtfs():
     dirname = "compact"
     filename = "compact.tar.Z"
     if not os.path.isdir(dirname):
-            print("HRTF data directory",dirname,"not there.  Checking for zip file",filename)
+            print("HRTF data directory \'"+dirname+"/\' not present.  Checking for zip file",filename)
 
             if not os.path.isfile(filename):
                 import urllib
-                print("HRTF zip file not there.  Downloading it...")
+                print("HRTF zip file \'"+filename+"\'' not present.  Downloading it...")
                 url = "http://sound.media.mit.edu/resources/KEMAR/compact.tar.Z"
                 urlretrieve(url, filename)
 
-            print("Untar-ing archive...")
+            print("Untar-ing archive...",end="")
             from subprocess import call
             call(["tar","-zxf",filename])
+            print(" done.")
     return
 
 

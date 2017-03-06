@@ -51,7 +51,7 @@ def decode_class(vec, class_names):  # generates a number from the one-hot vecto
 
 def shuffle_XY_paths(X,Y,paths):   # generates a randomized order, keeping X&Y(&paths) together
     assert (X.shape[0] == Y.shape[0] )
-    print("shuffle_XY_paths: Y.shape[0], len(paths) = ",Y.shape[0], len(paths))
+    #print("shuffle_XY_paths: Y.shape[0], len(paths) = ",Y.shape[0], len(paths))
     idx = np.array(range(Y.shape[0]))
     np.random.shuffle(idx)
     newX = np.copy(X)
@@ -102,13 +102,13 @@ def build_dataset(path="Preproc/Train/", load_frac=1.0):
 
             melgram = np.load(audio_path)
             
-            X[count,:,:] = melgram
-            Y[count,:] = this_Y
+            X[load_count,:,:] = melgram
+            Y[load_count,:] = this_Y
             paths.append(audio_path)     
             load_count += 1
 
     print("")
-    if ( count != total_load ):  # check to make sure we loaded everything we thought we would
+    if ( load_count != total_load ):  # check to make sure we loaded everything we thought we would
         raise Exception("Loaded "+str(load_count)+" files but was expecting "+str(total_load) )
 
     sr = 44100    # uh...probably shouldn't be hard-coding this. ??

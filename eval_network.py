@@ -78,7 +78,7 @@ def eval_network():
 
     print("class names = ",class_names)
 
-    batch_size = 128
+    batch_size = 100
     num_pred = X_test.shape[0]
 
     # evaluate the model

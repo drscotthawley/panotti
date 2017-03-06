@@ -57,7 +57,7 @@ def train_network():
 
 
     # train and score the model
-    batch_size = 128
+    batch_size = 100
     nb_epoch = 200
     model.fit(X_train, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
           verbose=1, validation_data=(X_test, Y_test), callbacks=[checkpointer])

@@ -23,27 +23,30 @@ from scipy import *
 import librosa
 import os, sys
 
-if sys.version_info[0] >= 3:    # Python 3 and up
-    from urllib.request import urlretrieve
-else:                           # Python 2
-    from urllib import urlretrieve
 
+# TODO: this never checks in case one of the operations fails
+def download_if_missing(dirname="compact", filename="compact.tar.Z", 
+    url="http://sound.media.mit.edu/resources/KEMAR/compact.tar.Z",tar=True):
 
-def download_hrtfs():
-    dirname = "compact"
-    filename = "compact.tar.Z"
     if not os.path.isdir(dirname):
-            print("HRTF data directory \'"+dirname+"/\' not present.  Checking for zip file",filename)
+            print("Directory \'"+dirname+"/\' not present.  Checking for compressed archive",filename)
 
             if not os.path.isfile(filename):
                 import urllib
-                print("HRTF zip file \'"+filename+"\'' not present.  Downloading it...")
-                url = "http://sound.media.mit.edu/resources/KEMAR/compact.tar.Z"
+                print("   Compressed archive \'"+filename+"\' not present.  Downloading it...")
+
+                if sys.version_info[0] >= 3:    # Python 3 and up
+                    from urllib.request import urlretrieve
+                else:                           # Python 2
+                    from urllib import urlretrieve
                 urlretrieve(url, filename)
 
-            print("Untar-ing archive...",end="")
             from subprocess import call
-            call(["tar","-zxf",filename])
+            print("   Uncompressing archive...",end="")
+            if (tar):
+                call(["tar","-zxf",filename])
+            else:
+                call(["unzip",filename])
             print(" done.")
     return
 
@@ -242,7 +245,7 @@ def project_multi(mono_sig, infile, sr, start, end, steps):
 
 
 def main(args):
-    download_hrtfs()                # make sure we've got the hrtf data we need
+    download_if_missing()                # make sure we've got the hrtf data we need
     for infile in args.file:
         if os.path.isfile(infile):
             print("Operating on file",infile,"...")

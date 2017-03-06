@@ -5,9 +5,9 @@
  See https://www.physionet.org/challenge/2016/
 
  Requirements:  
-    You need to download and unzip the data files
-    https://www.physionet.org/physiobank/database/challenge/2016/training.zip
-    https://www.physionet.org/physiobank/database/challenge/2016/validation.zip
+    The dataset, which it will try to download from
+        https://www.physionet.org/physiobank/database/challenge/2016/training.zip
+        https://www.physionet.org/physiobank/database/challenge/2016/validation.zip
 
 TODO: Currently -- because it's easier right now -- the validation & training sets get 
    concatenated, shuffled, and then Panotti does its own 80-20 split off that.
@@ -19,6 +19,7 @@ import os
 from os.path import isfile
 import pandas as pd
 import shutil
+import sys
 
 trainpath = "Train/"
 testpath = "Test/"
@@ -26,6 +27,35 @@ samplepath = "Samples/"
 
 class_names = ('normal','abnormal')
 set_names = ('training-a', 'training-b', 'training-c', 'training-d', 'training-e', 'training-f','validation')
+
+
+# TODO: this never checks in case one of the operations fails
+def download_if_missing(dirname="training-f", filename="training.zip", 
+    url="https://www.physionet.org/physiobank/database/challenge/2016/training.zip",tar=False):
+
+    if not os.path.isdir(dirname):
+            print("Directory \'"+dirname+"/\' not present.  Checking for compressed archive",filename)
+
+            if not os.path.isfile(filename):
+                import urllib
+                print("   Compressed archive \'"+filename+"\' not present.  Downloading it...")
+
+                if sys.version_info[0] >= 3:    # Python 3 and up
+                    from urllib.request import urlretrieve
+                else:                           # Python 2
+                    from urllib import urlretrieve
+                urlretrieve(url, filename)
+
+            from subprocess import call
+            print("   Uncompressing archive...",end="")
+            if (tar):
+                call(["tar","-zxf",filename])
+            else:
+                call(["unzip",filename])
+            print(" done.")
+    return
+
+
 
 def make_dirs():
     if not os.path.exists(samplepath):
@@ -46,6 +76,10 @@ def slurp_file(filepath):
 
 def main():
     make_dirs()
+
+    download_if_missing()
+    download_if_missing(dirname="validation", filename="validation.zip", 
+    url="https://www.physionet.org/physiobank/database/challenge/2016/validation.zip")
 
     for set_idx, setname in enumerate(set_names):
      

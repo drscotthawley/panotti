@@ -8,8 +8,8 @@ import os
 from os.path import isfile
 
 
-def get_class_names(path="Preproc/Train/"):  # class names are subdirectory names in Preproc/ directory
-    class_names = sorted( os.listdir(path) ) # sorted for consistency; but not always same as 'ls'
+def get_class_names(path="Preproc/Train/"):     # class names are subdirectory names in Preproc/ directory
+    class_names = os.listdir(path)              # name same order as 'ls', because Python.
     return class_names
 
 def get_total_files(path="Preproc/Train/"): 

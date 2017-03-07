@@ -36,7 +36,6 @@ def main(args):
             print("--> ANSWER:", class_names[ np.argmax(y_proba)])
         else:
             print(" *** File",infile,"does not exist.  Skipping.")
-        print("")
  
     return
 

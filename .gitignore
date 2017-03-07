@@ -4,3 +4,4 @@ Preproc
 __pycache__
 *.pyc
 *.hdf5
+nohup.out

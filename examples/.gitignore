@@ -7,3 +7,4 @@ training*
 validation*
 compact*
 nohup.out
+*.hdf5

@@ -59,7 +59,8 @@ def dumbCNN(X, nb_classes, nb_layers=4):
 
 
 
-def load_model(X, class_names, nb_layers=4, try_checkpoint=True, no_cp_fatal=False):
+def load_model(X, class_names, nb_layers=4, try_checkpoint=True, 
+    no_cp_fatal=False, checkpoint_filepath = 'weights.hdf5'):
     # make the model
     model = dumbCNN(X, nb_classes=len(class_names), nb_layers=nb_layers)
     model.compile(loss='categorical_crossentropy',
@@ -69,7 +70,6 @@ def load_model(X, class_names, nb_layers=4, try_checkpoint=True, no_cp_fatal=Fal
 
     # Initialize weights using checkpoint if it exists.
     if (try_checkpoint): 
-        checkpoint_filepath = 'weights.hdf5'
         print("Looking for previous weights...")
         if ( isfile(checkpoint_filepath) ):
             print ('Checkpoint file detected. Loading weights.')

@@ -29,7 +29,10 @@ def train_network():
     X_test, Y_test, paths_test, class_names_test  = build_dataset(path="Preproc/Test/")
     assert( class_names == class_names_test )
 
-    model = load_model(X_train, class_names, no_cp_fatal=False)
+    checkpoint_filepath = 'weights.hdf5'
+    model = load_model(X_train, class_names, no_cp_fatal=False, checkpoint_filepath=checkpoint_filepath)
+    checkpointer = ModelCheckpoint(filepath=checkpoint_filepath, verbose=1, save_best_only=True)
+
 
     # train and score the model
     batch_size = 100

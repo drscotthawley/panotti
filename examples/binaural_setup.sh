@@ -15,7 +15,7 @@ echo "Splitting into 2-second clips..."
 python ~/panotti/utils/split_audio.py -r 2 cl*/*.wav
 echo "Moving clips to Samples/"
 mkdir -p Samples
-mv e0* Samples/ 
+mv cl* Samples/ 
 echo "Done."
 echo ""
 echo "Now run these..."

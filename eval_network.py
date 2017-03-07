@@ -15,7 +15,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import librosa
 import os
-from os.path import isfile
 from panotti.models import * 
 from panotti.datautils import *
 from sklearn.metrics import roc_auc_score, roc_curve, auc
@@ -52,32 +51,11 @@ def eval_network():
     np.random.seed(1)
 
     # get the data
-    X_test, Y_test, paths_test, class_names, sr = build_dataset(
-        path="Preproc/Test/",shuffle=False,load_frac=1)
-
-    # make the model
-    model = dumbCNN(X_test,Y_test, nb_classes=len(class_names),nb_layers=4)
-    model.compile(loss='categorical_crossentropy',
-              optimizer='adadelta',
-              metrics=['accuracy'])
-    model.summary()
-
-    # Initialize weights using checkpoint if it exists. (Checkpointing requires h5py)
-    checkpoint_filepath = 'weights.hdf5'
-    if (True):
-        print("Looking for previous weights...")
-        if ( isfile(checkpoint_filepath) ):
-            print ('Checkpoint file detected. Loading weights.')
-            model.load_weights(checkpoint_filepath)
-        else:
-            print ('No checkpoint file detected. You gotta train_network first.')
-            exit(1) 
-    else:
-        print('Starting from scratch (no checkpoint)')
-
-
+    X_test, Y_test, paths_test, class_names = build_dataset(path="Preproc/Test/")
     print("class names = ",class_names)
 
+    model = load_model(X_test, class_names, no_cp_fatal=True)
+                
     batch_size = 100
     num_pred = X_test.shape[0]
 

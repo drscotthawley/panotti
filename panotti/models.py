@@ -15,6 +15,7 @@ from keras.layers import Input, Dense, TimeDistributed, LSTM, Dropout, Activatio
 from keras.layers import Convolution2D, MaxPooling2D, Flatten
 from keras.layers.normalization import BatchNormalization
 from keras.layers.advanced_activations import ELU
+from os.path import isfile
 
 
 ''' 
@@ -25,7 +26,7 @@ dumbCNN:  This is kind of a mixture of a dumbed-down versoin of Keun Woo Choi's
 
     Uses same kernel, filters and pool size for everything
 '''
-def dumbCNN(X, Y, nb_classes, nb_layers=4):
+def dumbCNN(X, nb_classes, nb_layers=4):
     nb_filters = 32  # number of convolutional filters = "feature maps"
     kernel_size = (3, 3)  # convolution kernel size
     pool_size = (2, 2)  # size of pooling area for max pooling
@@ -54,4 +55,31 @@ def dumbCNN(X, Y, nb_classes, nb_layers=4):
     model.add(Dense(nb_classes))
     model.add(Activation("softmax"))
     return model
+
+
+
+
+def load_model(X, class_names, nb_layers=4, try_checkpoint=True, no_cp_fatal=False):
+    # make the model
+    model = dumbCNN(X, nb_classes=len(class_names), nb_layers=nb_layers)
+    model.compile(loss='categorical_crossentropy',
+              optimizer='adadelta',
+              metrics=['accuracy'])
+    model.summary()
+
+    # Initialize weights using checkpoint if it exists.
+    if (try_checkpoint): 
+        checkpoint_filepath = 'weights.hdf5'
+        print("Looking for previous weights...")
+        if ( isfile(checkpoint_filepath) ):
+            print ('Checkpoint file detected. Loading weights.')
+            model.load_weights(checkpoint_filepath)
+        else:
+            if (no_cp_fatal):
+                raise Exception("No weights file detected; can't do anything.")
+            else:
+                print('No checkpoint file detected.  Starting from scratch.')
+
+    return model
+
     

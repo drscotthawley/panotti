@@ -68,6 +68,11 @@ def shuffle_XY_paths(X,Y,paths):   # generates a randomized order, keeping X&Y(&
         newpaths[i] = paths[idx[i]]
     return newX, newY, newpaths
 
+def make_melgram(mono_sig, sr):
+    melgram = librosa.logamplitude(librosa.feature.melspectrogram(mono_sig, 
+        sr=sr, n_mels=96),ref_power=1.0)[np.newaxis,np.newaxis,:,:]
+    return melgram
+
 
 # can be used for test dataset as well
 def build_dataset(path="Preproc/Train/", load_frac=1.0):

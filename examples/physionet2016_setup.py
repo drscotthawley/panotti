@@ -4,27 +4,22 @@
  Set up the heart sounds database for the physionet 2016 challenge
  See https://www.physionet.org/challenge/2016/
 
-Need to fix: Currently -- because it's easier right now -- the validation & training sets get 
-   concatenated, shuffled, and then panotti/preproc does its own 80-20 split off that.
-   Gotta fix that so training stays training, and val stays val. For now see below.
+NOTE: The PhysioNet 2016 Challenge dataset has a "validation" section, but their 
+    'validation' data is INCLUDED in their training set. (??)
+    Thus it is not a validation set in the statistics sense (it's an abbreviated
+    training set used for "validating" your entry to the contest befor they run
+    your code), so it might as well be ignored.
+    So we do this like we would any other dataset, just using the concatenated 
+    training sets a-f, and then letting the preprocessor do the 80-20 split, 
 
-Here's how I run it for now, in light of the above... (copy & paste the following):
- ./physionet_setup.py
- ~/panotti/preprocess_data.py
- mkdir Val
- mv Preproc/*/*/*validation* Val/
- mv Preproc/Test/abnormal/* Preproc/Train/abnormal/
- mv Preproc/Test/normal/* Preproc/Train/normal/
- mv Val/*abnormal* Preproc/Test/abnormal/
- mv Val/*normal* Preproc/Test/normal/
- rmdir Val
- ~/panotti/train_network.py
-
+After running this Python script, you should run:
+    python ~/panotti/utils/split_audio.py -r 5 Samples/*/*.wav
+    python ~/panotti/preprocess_data.py
+    python ~/panotti/train_network.py
 
 Requirements:  
-    The dataset, which the program will try to download from (both) the following URLs:
+    The dataset, which the program will try to download from the following URL:
         https://www.physionet.org/physiobank/database/challenge/2016/training.zip
-        https://www.physionet.org/physiobank/database/challenge/2016/validation.zip
 '''
 
 from __future__ import print_function
@@ -39,7 +34,7 @@ testpath = "Test/"
 samplepath = "Samples/"
 
 class_names = ('normal','abnormal')
-set_names = ('training-a', 'training-b', 'training-c', 'training-d', 'training-e', 'training-f','validation')
+set_names = ('training-a', 'training-b', 'training-c', 'training-d', 'training-e', 'training-f') # no point getting their val set
 
 
 # TODO: this never checks in case one of the operations fails
@@ -72,13 +67,13 @@ def download_if_missing(dirname="training-f", filename="training.zip",
 
 def make_dirs():
     if not os.path.exists(samplepath):
-        os.mkdir( trainpath )
-        os.mkdir( testpath )
         os.mkdir( samplepath )
+        #os.mkdir( trainpath )
+        #os.mkdir( testpath )
         for classname in class_names:
-            os.mkdir( trainpath+classname );   
-            os.mkdir( testpath+classname );
             os.mkdir( samplepath+classname );
+            #os.mkdir( trainpath+classname );   
+            #os.mkdir( testpath+classname );
     return  
 
 
@@ -91,8 +86,8 @@ def main():
     make_dirs()
 
     download_if_missing()
-    download_if_missing(dirname="validation", filename="validation.zip", 
-    url="https://www.physionet.org/physiobank/database/challenge/2016/validation.zip")
+    #NO. download_if_missing(dirname="validation", filename="validation.zip", 
+    #       url="https://www.physionet.org/physiobank/database/challenge/2016/validation.zip")
 
     for set_idx, setname in enumerate(set_names):
      
@@ -107,7 +102,7 @@ def main():
         df = pd.read_csv(ref_filename, names=("file","code"))
         df["code"] = df["code"].replace([-1,1],['normal','abnormal'])   
         df["file"] = df["file"].replace([r"$"],[".wav"],regex=True)
-        #print("\nFile ",ref_filename,":\n", df,sep="")
+
         for index, row in df.iterrows():
             this_file = row["file"]
             this_class = row["code"]

@@ -29,32 +29,7 @@ def train_network():
     X_test, Y_test, paths_test, class_names_test  = build_dataset(path="Preproc/Test/")
     assert( class_names == class_names_test )
 
-    #print("class_names      = ",class_names)
-    #print("class_names_test = ",class_names_test)
-    #exit(1)
-
-    # make the model
-    model = dumbCNN(X_train,Y_train, nb_classes=len(class_names), nb_layers=4)
-    model.compile(loss='categorical_crossentropy',
-              optimizer='adadelta',
-              metrics=['accuracy'])
-    model.summary()
-
-
-    # Initialize weights using checkpoint if it exists. (Checkpointing requires h5py)
-    load_checkpoint = True
-    checkpoint_filepath = 'weights.hdf5'
-    if (load_checkpoint):
-        print("Looking for previous weights...")
-        if ( isfile(checkpoint_filepath) ):
-            print ('Checkpoint file detected. Loading weights.')
-            model.load_weights(checkpoint_filepath)
-        else:
-            print ('No checkpoint file detected.  Starting from scratch.')
-    else:
-        print('Starting from scratch (no checkpoint)')
-    checkpointer = ModelCheckpoint(filepath=checkpoint_filepath, verbose=1, save_best_only=True)
-
+    model = load_model(X_train, class_names, no_cp_fatal=False)
 
     # train and score the model
     batch_size = 100

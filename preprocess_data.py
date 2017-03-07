@@ -65,8 +65,9 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
 
             # get mel-spectrogram for each channel, and layer them into multi-dim array
             for channel in range(aud.shape[0]):
-                melgram = librosa.logamplitude(librosa.feature.melspectrogram(aud[channel], 
-                    sr=sr, n_mels=96),ref_power=1.0)[np.newaxis,np.newaxis,:,:]
+                melgram = make_melgram(aud[channel])
+                #melgram = librosa.logamplitude(librosa.feature.melspectrogram(aud[channel], 
+                #    sr=sr, n_mels=96),ref_power=1.0)[np.newaxis,np.newaxis,:,:]
 
                 if (0 == channel):
                     layers = melgram

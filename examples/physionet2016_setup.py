@@ -5,36 +5,36 @@
  See https://www.physionet.org/challenge/2016/
 
 NOTE: The PhysioNet 2016 Challenge dataset has a "validation" section, but their 
-    'validation' data is INCLUDED in their training set. (??)
-    Thus it is not a validation set in the statistics sense (it's an abbreviated
-    training set used for "validating" your entry to the contest befor they run
-    your code), so it might as well be ignored.
-    So we do this like we would any other dataset, just using the concatenated 
-    training sets a-f, and then letting the preprocessor do the 80-20 split, 
-
-After running this Python script, you should run:
-    python ~/panotti/utils/split_audio.py -r 5 Samples/*/*.wav
-    python ~/panotti/preprocess_data.py
-    python ~/panotti/train_network.py
+    'validation' data is INCLUDED in their training set. 
+    So what we need do is regard the val set as val data, but DELETE instances of 
+    val data that appear in the training set
 
 Requirements:  
-    The dataset, which the program will try to download from the following URL:
+    The dataset, which the program will try to download from the following URLs:
         https://www.physionet.org/physiobank/database/challenge/2016/training.zip
+        https://www.physionet.org/physiobank/database/challenge/2016/validation.zip
 '''
 
 from __future__ import print_function
 import os
 from os.path import isfile
+import glob
 import pandas as pd
 import shutil
 import sys
+from subprocess import call
+import glob
 
-trainpath = "Train/"
-testpath = "Test/"
+sys.path.insert(0, '../utils')
+from split_audio import *
+
+
 samplepath = "Samples/"
+trainpath = "Samples/Train/"
+testpath = "Samples/Test/"
 
 class_names = ('normal','abnormal')
-set_names = ('training-a', 'training-b', 'training-c', 'training-d', 'training-e', 'training-f') # no point getting their val set
+set_names = ('training-a', 'training-b', 'training-c', 'training-d', 'training-e', 'training-f','validation') # no point getting their val set
 
 
 # TODO: this never checks in case one of the operations fails
@@ -54,7 +54,7 @@ def download_if_missing(dirname="training-f", filename="training.zip",
                     from urllib import urlretrieve
                 urlretrieve(url, filename)
 
-            from subprocess import call
+
             print("   Uncompressing archive...",end="")
             if (tar):
                 call(["tar","-zxf",filename])
@@ -64,39 +64,58 @@ def download_if_missing(dirname="training-f", filename="training.zip",
     return
 
 
-
+# create the directories we need
 def make_dirs():
     if not os.path.exists(samplepath):
         os.mkdir( samplepath )
-        #os.mkdir( trainpath )
-        #os.mkdir( testpath )
+        os.mkdir( trainpath )
+        os.mkdir( testpath )
         for classname in class_names:
-            os.mkdir( samplepath+classname );
-            #os.mkdir( trainpath+classname );   
-            #os.mkdir( testpath+classname );
+            os.mkdir( trainpath+classname );   
+            os.mkdir( testpath+classname );
     return  
 
 
+# read in a text file as a list of lines
 def slurp_file(filepath):
     line_list = open(filepath).readlines()
     return line_list
 
 
+# any files with same names in both Test/ and Train/ get deleted
+def delete_test_dupes(class_names):
+    for classname in class_names:
+        print("Deleting duplicates in "+testpath+classname+"/ & "+trainpath+classname+"...")
+        trainlist = [os.path.basename(x) for x in glob.glob(trainpath+classname+"/*")]
+        testlist = [os.path.basename(x) for x in glob.glob(testpath+classname+"/*")]
+        both = set(trainlist).intersection(testlist)
+        #print(" both = ",both)
+        for filename in both:
+            path = trainpath+classname+"/"+filename
+            os.remove(path)
+    return
+
+
+def chopup_clips(class_names):
+    dur = 5;
+    print("Chopping audio files into",dur,"second clips...")
+    file_list = glob.glob("Samples/*/*/*.wav")
+    split_audio(file_list, clip_dur=dur, remove_orig=True)
+    return
+
+
 def main():
     make_dirs()
-
     download_if_missing()
-    #NO. download_if_missing(dirname="validation", filename="validation.zip", 
-    #       url="https://www.physionet.org/physiobank/database/challenge/2016/validation.zip")
+    download_if_missing(dirname="validation", filename="validation.zip", 
+           url="https://www.physionet.org/physiobank/database/challenge/2016/validation.zip")
 
     for set_idx, setname in enumerate(set_names):
      
-        # TODO: come back and fix this...
-        #if (setname != 'validation'):
-        #    destpath = trainpath
-        #else:
-        #    destpath = testpath
-        destpath = samplepath   # TODO: for now
+        if (setname != 'validation'):
+            destpath = trainpath
+        else:
+            destpath = testpath
 
         ref_filename = setname+'/'+'REFERENCE.csv'
         df = pd.read_csv(ref_filename, names=("file","code"))
@@ -107,9 +126,16 @@ def main():
             this_file = row["file"]
             this_class = row["code"]
             src = setname+'/'+this_file
-            dst = destpath + this_class + '/cl-'+this_class+"-"+ setname+"-"+this_file
+            dst = destpath + this_class + '/cl-'+this_class+"-"+this_file
             print("src, dst =  ",src,dst)
             shutil.copyfile(src,dst)
+
+    delete_test_dupes(class_names)
+    chopup_clips(class_names)
+
+    print("\nFINISHED. Now run the following command:\n ../preprocess_data.py --already") 
+    return
+
 
 if __name__ == '__main__':
     main()

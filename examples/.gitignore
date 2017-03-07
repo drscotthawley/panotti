@@ -1,0 +1,9 @@
+Samples
+Preproc
+*.wav
+cl*.wav
+e0.0*
+training*
+validation*
+compact*
+nohup.out

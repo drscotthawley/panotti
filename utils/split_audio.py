@@ -37,8 +37,8 @@ def fix_last_element(clip_list, axis):
 
 
 
-def main(args):
-    for infile in args.file:
+def split_audio(file_list, clip_dur=2, remove_orig=True):
+    for infile in file_list:
         if os.path.isfile(infile):
             print("Input file: ",infile,"... ",end="",sep="")
             signal, sr = librosa.load(infile, sr=None, mono=False)   # don't assume sr or mono
@@ -47,7 +47,7 @@ def main(args):
             else:
                 print("this is a multi-channel file: signal.shape = ",signal.shape)
             axis = signal.ndim - 1
-            stride = args.clip_dur * sr                             # length of clip in samples
+            stride = clip_dur * sr                             # length of clip in samples
             indices = np.arange(stride,signal.shape[axis],stride)   # where to split
             clip_list = np.split( signal, indices, axis=axis)       # do the splitting
             clips = fix_last_element(clip_list, axis)               # what to do with last clip
@@ -64,7 +64,7 @@ def main(args):
                 print("      Saving file",outfile)
                 librosa.output.write_wav(outfile,clip,sr)
 
-            if args.remove:
+            if remove_orig:
                 os.remove(infile)
         else:
             print(" *** File",infile,"does not exist.  Skipping.")
@@ -79,5 +79,5 @@ if __name__ == "__main__":
     parser.add_argument("clip_dur", help="duraction of each clip in seconds",type=int)
     parser.add_argument('file', help="file(s) to split", nargs='+')   
     args = parser.parse_args()
-    main(args)
+    split_audio(args.file, clip_dur=args.clip_dur, remove_orig=args.remove)
 

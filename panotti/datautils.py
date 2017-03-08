@@ -105,7 +105,7 @@ def build_dataset(path="Preproc/Train/", load_frac=1.0):
         file_list = class_files[0:n_load]
         for idx2, infilename in enumerate(file_list):          
             audio_path = path + classname + '/' + infilename
-            if (0 == idx2 % printevery):
+            if (0 == idx2 % printevery) or (idx2+1 == len(class_files)):
                 print("\r Loading class ",idx+1,"/",nb_classes,": \'",classname,
                     "\', File ",idx2+1,"/", n_load,": ",audio_path,"                  ", 
                     sep="",end="")

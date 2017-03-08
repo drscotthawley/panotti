@@ -18,7 +18,7 @@
 # duration of each generated signal, in seconds
 SIGNAL_DUR=40
 
-# sample rate of generated audio
+# sample rate of generated audio signals
 RATE=44.1k
 
 # duraton in seconds of each sound clip we get by chopping up signals
@@ -29,15 +29,19 @@ N_AUG=4
 
 # number of discrete azimuthal angles to use when generating binaural data
 N_AZ=12
-
+let "deg = 360/$N_AZ"
 
 # Check if sox exists
 command -v sox >/dev/null 2>&1 || { echo >&2 "I require sox but it's not installed. (Try 'sudo apt-get install sox'?) Aborting."; exit 1; }
 
 # Little FYI notice
 echo " "
-echo "NOTICE: You are about to generate 13GB of data, and the whole setup process will take at least 10 minutes."
-echo "If you'd like less data/time, abort this script and edit it, and decrease the values of SIGNAL_DUR, RATE, N_AUG and/or N_AZ."
+echo "Example of binaural source localization.  Generates $deg-degree increments in azimuthal plane"
+echo " "
+echo "NOTICE: You are about to generate 14GB of data (12GB of audio and 2GB of spectrograms),"
+echo "        and the whole setup process will take at least 10 minutes."
+echo "        If you'd like less/more data (& time), abort this script and edit it, and" 
+echo "        decrease the values of SIGNAL_DUR, RATE, N_AUG and/or N_AZ."
 echo " "
 read -p "Press ^C to abort now, or press enter to continue... "
 
@@ -79,7 +83,7 @@ cd ..
 
 echo " "
 echo "FINISHED. Feel free to delete the Samples/ directory to free up $samples_size.  (Only Preproc/ is used in what follows.)"
-echo "Now run the following (and let it run for about 10 epochs)..."
+echo "Now run the following..."
 echo "  cd binaural; ../../train_network.py"
 echo " "
 

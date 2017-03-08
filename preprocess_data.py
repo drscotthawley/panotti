@@ -67,22 +67,10 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
                 sr = None
                 if (resample is not None):
                     sr = resample
-                aud, sr = librosa.load(audio_path, mono=False, sr=sr)    # read audio file
+                signal, sr = librosa.load(audio_path, mono=False, sr=sr)    # read audio file
     
-                # make mono file into "1-channel multichannel"
-                if (aud.ndim == 1):
-                    aud = np.reshape( aud, (1,aud.shape[0]))
-    
-                # get mel-spectrogram for each channel, and layer them into multi-dim array
-                for channel in range(aud.shape[0]):
-                    melgram = make_melgram(aud[channel],sr)
-                    #melgram = librosa.logamplitude(librosa.feature.melspectrogram(aud[channel], 
-                    #    sr=sr, n_mels=96),ref_power=1.0)[np.newaxis,np.newaxis,:,:]
-    
-                    if (0 == channel):
-                        layers = melgram
-                    else:
-                        layers = np.append(layers,melgram,axis=1)  # we keep axis=0 free for keras batches
+                layers = make_layered_melgram(signal, sr)
+
                 if not already_split:
                     if (idx2 >= n_train):
                         outsub = "Test/"

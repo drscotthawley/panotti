@@ -74,6 +74,22 @@ def make_melgram(mono_sig, sr):
     return melgram
 
 
+# turn multichannel audio as multiple melgram layers
+def make_layered_melgram(signal, sr):
+    if (signal.ndim == 1):
+        signal = np.reshape( signal, (1,signal.shape[0]))
+
+    # get mel-spectrogram for each channel, and layer them into multi-dim array
+    for channel in range(signal.shape[0]):
+        melgram = make_melgram(signal[channel],sr)
+ 
+        if (0 == channel):
+            layers = melgram
+        else:
+            layers = np.append(layers,melgram,axis=1)  # we keep axis=0 free for keras batches
+    return layers
+
+
 # can be used for test dataset as well
 def build_dataset(path="Preproc/Train/", load_frac=1.0):
 

@@ -21,17 +21,16 @@ from os.path import isfile
 from timeit import default_timer as timer
 
 
-def train_network():
+def train_network(wweights_file="weights.hdf5", classpath="Preproc/Train/"):
     np.random.seed(1)
 
     # get the data
-    X_train, Y_train, paths_train, class_names = build_dataset(path="Preproc/Train/")
-    X_test, Y_test, paths_test, class_names_test  = build_dataset(path="Preproc/Test/")
+    X_train, Y_train, paths_train, class_names = build_dataset(path=classpath)
+    X_test, Y_test, paths_test, class_names_test  = build_dataset(path=classpath+"../Test/")
     assert( class_names == class_names_test )
 
-    checkpoint_filepath = 'weights.hdf5'
-    model = load_model(X_train, class_names, no_cp_fatal=False, checkpoint_filepath=checkpoint_filepath)
-    checkpointer = ModelCheckpoint(filepath=checkpoint_filepath, verbose=1, save_best_only=True)
+    model = load_model(X_train, class_names, no_cp_fatal=False, weights_file=weights_file)
+    checkpointer = ModelCheckpoint(filepath=weights_file, verbose=1, save_best_only=True)
 
 
     # train and score the model
@@ -45,4 +44,12 @@ def train_network():
 
 
 if __name__ == '__main__':
-    train_network()
+    import argparse
+    parser = argparse.ArgumentParser(description="evaluates network on testing dataset")
+    parser.add_argument('-w', '--weights', #nargs=1, type=argparse.FileType('r'), 
+        help='weights file in hdf5 format', default="weights.hdf5")
+    parser.add_argument('-c', '--classpath', #type=argparse.string, 
+        help='Train dataset directory with list of classes', default="Preproc/Train/")
+    args = parser.parse_args()
+    train_network(weights_file=args.weights, classpath=args.classpath)
+

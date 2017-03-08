@@ -12,6 +12,9 @@ Trained using Fraunhofer IDMT's database of monophonic guitar effects,
 '''
 from __future__ import print_function
 import numpy as np
+import matplotlib
+matplotlib.use('TKAgg')
+
 import matplotlib.pyplot as plt
 import librosa
 import os
@@ -29,17 +32,20 @@ def count_mistakes(y_scores,Y_test,paths_test,class_names):
     n_classes = len(class_names)
     mistake_count = np.zeros(n_classes)
     mistake_log = list(create(n_classes))
+    max_string_len = 0
     for i in range(Y_test.shape[0]):
         pred = decode_class(y_scores[i],class_names)
         truth = decode_class(Y_test[i],class_names)
         if (pred != truth):
             mistake_count[truth] += 1
-            mistake_log[truth].append( paths_test[i]+": should be "+class_names[truth]+
+            max_string_len = max( len(paths_test[i]), max_string_len )
+            mistake_log[truth].append( paths_test[i].ljust(max_string_len)+": should be "+class_names[truth]+
                 " but came out as "+class_names[pred])
 
     mistakes_sum = int(np.sum(mistake_count))
     print("    Found",mistakes_sum,"total mistakes out of",Y_test.shape[0],"attempts")
     print("      Mistakes by class: ")
+
     for i in range(n_classes):
         print("          class \'",class_names[i],"\': ",int(mistake_count[i]), sep="")
         for j in range(len(mistake_log[i])):
@@ -47,36 +53,28 @@ def count_mistakes(y_scores,Y_test,paths_test,class_names):
     return
 
 
-def eval_network():
+def eval_network(weights_file="weights.hdf5", classpath="Preproc/Test/"):
     np.random.seed(1)
 
     # get the data
-    X_test, Y_test, paths_test, class_names = build_dataset(path="Preproc/Test/")
+    X_test, Y_test, paths_test, class_names = build_dataset(path=classpath)
     print("class names = ",class_names)
+    n_classes = len(class_names)
 
-    model = load_model(X_test, class_names, no_cp_fatal=True)
+    model = load_model(X_test, class_names, no_cp_fatal=True, weights_file=weights_file)
                 
     batch_size = 100
     num_pred = X_test.shape[0]
 
-    # evaluate the model
-    print("Running model.evaluate...")
-    scores = model.evaluate(X_test, Y_test, verbose=1, batch_size=batch_size)
-    print('Test score:', scores[0])
-    print('Test accuracy:', scores[1])
-
     
     print("Running predict_proba...")
     y_scores = model.predict_proba(X_test[0:num_pred,:,:,:],batch_size=batch_size)
-    auc_score = roc_auc_score(Y_test, y_scores)
-    print("AUC = ",auc_score)
 
-    n_classes = len(class_names)
 
-    print(" Counting mistakes ")
+    print("Counting mistakes ")
     count_mistakes(y_scores,Y_test,paths_test,class_names)
 
-    print("Generating ROC curves...")
+    print("Measuring ROC...")
     fpr = dict()
     tpr = dict()
     roc_auc = dict()
@@ -84,6 +82,10 @@ def eval_network():
         fpr[i], tpr[i], _ = roc_curve(Y_test[:, i], y_scores[:, i])
         roc_auc[i] = auc(fpr[i], tpr[i])
 
+    auc_score = roc_auc_score(Y_test, y_scores)
+    print("Global AUC = ",auc_score)
+
+    print("\nDrawing ROC curves...")
     plt.figure()
     lw = 2                      # line width
     for i in range(n_classes):
@@ -95,9 +97,27 @@ def eval_network():
     plt.ylabel('True Positive Rate')
     plt.title('Receiver operating characteristic')
     plt.legend(loc="lower right")
+    plt.draw()
+    plt.show(block=False)
+    print("")
+
+    # evaluate the model
+    print("Running model.evaluate...")
+    scores = model.evaluate(X_test, Y_test, verbose=1, batch_size=batch_size)
+    print('Test score:', scores[0])
+    print('Test accuracy:', scores[1])
+
+    print("\nFinished.  Close plot window to return to shell.")
     plt.show()
     return
 
 
 if __name__ == '__main__':
-    eval_network()
+    import argparse
+    parser = argparse.ArgumentParser(description="evaluates network on testing dataset")
+    parser.add_argument('-w', '--weights', #nargs=1, type=argparse.FileType('r'), 
+        help='weights file in hdf5 format', default="weights.hdf5")
+    parser.add_argument('-c', '--classpath', #type=argparse.string, 
+        help='test dataset directory with list of classes', default="Preproc/Test/")
+    args = parser.parse_args()
+    eval_network(weights_file=args.weights, classpath=args.classpath)

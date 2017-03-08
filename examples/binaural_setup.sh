@@ -1,30 +1,85 @@
-#! /bin/sh
+#! /bin/bash
 # Example of binaural source localization.  Generates 30-degree increments in azimuthal plane
 # Author: Scott Hawley
 #
-# Requirements: sox  (SOund eXchange).  sudo apt-get install sox
+# Requirements: sox  (SOund eXchange).  
+#
+# NOTES: 
+#    1. The call to augment & binauralify will process ANY .wav files sitting in the binaural/ directory. 
+#       Thus if you want to add more test signals, create binaural/ first and add your signals, 
+#       then run this script
+#    2. We split the signals into clips first, THEN augment, rather than augmenting first.  This gives our
+#       data better "granularity" and makes it so the Test dataset won't (or is very unlikely to) contain
+#       "exact" copies of what's in the Train dataset
+#
+# TODO: Need checks to see if commands succeed
+
+
+# duration of each generated signal, in seconds
+SIGNAL_DUR=40
+
+# sample rate of generated audio
+RATE=44.1k
+
+# duraton in seconds of each sound clip we get by chopping up signals
+CLIP_DUR=2
+
+# number of additional "augmented" versions of each clip to make
+N_AUG=4
+
+# number of discrete azimuthal angles to use when generating binaural data
+N_AZ=12
+
+
+# Check if sox exists
+command -v sox >/dev/null 2>&1 || { echo >&2 "I require sox but it's not installed. (Try 'sudo apt-get install sox'?) Aborting."; exit 1; }
+
+# Little FYI notice
+echo " "
+echo "NOTICE: You are about to generate 13GB of data, and the whole setup process will take at least 10 minutes."
+echo "If you'd like less data/time, abort this script and edit it, and decrease the values of SIGNAL_DUR, RATE, N_AUG and/or N_AZ."
+echo " "
+read -p "Press ^C to abort now, or press enter to continue... "
+
 
 echo "Creating directory binaural/..."
 mkdir -p binaural; cd binaural
-NOISE_DUR=90
-RATE=44.1k
-echo "Generating test signals ($NOISE_DUR seconds long each)..."
-echo "      white noise..."; sox -r $RATE -n whitenoise.wav synth $NOISE_DUR whitenoise
-echo "      pink noise..."; sox -r $RATE -n pinknoise.wav synth $NOISE_DUR pinknoise
-echo "      brown noise..."; sox -r $RATE -n brownnoise.wav synth $NOISE_DUR brownnoise
-echo "      1k square wave..."; sox -r $RATE -n square1k.wav synth $NOISE_DUR square 1000
-echo "Binauralifying..."
-python ../../utils/binauralify.py 12 *noise.wav square*.wav
-CLIP_DUR=2
+
+echo "Generating signals..."
+echo "      white noise..."; sox -r $RATE -n gen_white.wav synth $SIGNAL_DUR whitenoise
+echo "      pink noise..."; sox -r $RATE -n gen_pink.wav synth $SIGNAL_DUR pinknoise
+echo "      brown noise..."; sox -r $RATE -n gen_brown.wav synth $SIGNAL_DUR brownnoise
+echo "      tpdf noise..."; sox -r $RATE -n gen_tpdf.wav synth $SIGNAL_DUR tpdfnoise
+echo "      sine sweep..."; sox -r $RATE -n gen_sinesw.wav synth $SIGNAL_DUR sine 20-20000
+echo "      square sweep..."; sox -r $RATE -n gen_squaresw.wav synth $SIGNAL_DUR square 50-5000
+echo "      fmodded plucks..."; sox -n gen_pluck.wav  synth 1 pluck  synth 1 sine fmod 700-100 repeat $SIGNAL_DUR 
+
 echo "Splitting into $CLIP_DUR -second clips..."
-python ../../utils/split_audio.py -r $CLIP_DUR cl*/*.wav
+python ../../utils/split_audio.py -r $CLIP_DUR *.wav
+
+echo "Augmenting dataset by a factor of $N_AUG..."
+python ../../utils/augment_audio.py -q $N_AUG *.wav
+
+echo "Binauralifying into $N_AZ discrete azimuthal locations..."
+python ../../utils/binauralify.py -q $N_AZ *.wav
+
 echo "Moving clips to Samples/"
 mkdir -p Samples
-mv cl* Samples/ 
+mv class* Samples/ 
+
+echo "Cleaing directory of all non-essential generated files"
+/bin/rm -f gen*.wav compact.tar.Z
+
 echo "Pre-procesing data (could take a while)..."
 python ../../preprocess_data.py
+
+samples_size=$(du -smh Samples | awk '{print $1}')
+
 cd ..
+
 echo " "
-echo "FINISHED.  Now run this (and let it run for about 10 epochs)..."
-echo "   cd binaural; ../../train_network.py"
+echo "FINISHED. Feel free to delete the Samples/ directory to free up $samples_size.  (Only Preproc/ is used in what follows.)"
+echo "Now run the following (and let it run for about 10 epochs)..."
+echo "  cd binaural; ../../train_network.py"
 echo " "
+

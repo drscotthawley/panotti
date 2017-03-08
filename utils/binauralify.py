@@ -29,25 +29,25 @@ def download_if_missing(dirname="compact", filename="compact.tar.Z",
     url="http://sound.media.mit.edu/resources/KEMAR/compact.tar.Z",tar=True):
 
     if not os.path.isdir(dirname):
-            print("Directory \'"+dirname+"/\' not present.  Checking for compressed archive",filename)
+        print("Directory \'"+dirname+"/\' not present.  Checking for compressed archive",filename)
 
-            if not os.path.isfile(filename):
-                import urllib
-                print("   Compressed archive \'"+filename+"\' not present.  Downloading it...")
+        if not os.path.isfile(filename):
+            import urllib
+            print("   Compressed archive \'"+filename+"\' not present.  Downloading it...")
 
-                if sys.version_info[0] >= 3:    # Python 3 and up
-                    from urllib.request import urlretrieve
-                else:                           # Python 2
-                    from urllib import urlretrieve
-                urlretrieve(url, filename)
+            if sys.version_info[0] >= 3:    # Python 3 and up
+                from urllib.request import urlretrieve
+            else:                           # Python 2
+                from urllib import urlretrieve
+            urlretrieve(url, filename)
 
-            from subprocess import call
-            print("   Uncompressing archive...",end="")
-            if (tar):
-                call(["tar","-zxf",filename])
-            else:
-                call(["unzip",filename])
-            print(" done.")
+        from subprocess import call
+        print("   Uncompressing archive...",end="")
+        if (tar):
+            call(["tar","-zxf",filename])
+        else:
+            call(["unzip",filename])
+        print(" done.")
     return
 
 
@@ -209,7 +209,7 @@ def path(t_sig, infile, sr, start, end, duration=0, window_size=1024, fs=44100):
 
 
 # takes a single file's worth of mono and generates multiple files at different locations
-def project_multi(mono_sig, infile, sr, start, end, steps):
+def project_multi(mono_sig, infile, sr, start, end, steps, quiet=False):
     elev_bgn = start[0]
     az_bgn = start[1]
     elev_end = end[0]   
@@ -233,13 +233,16 @@ def project_multi(mono_sig, infile, sr, start, end, steps):
             stereo_sig = np.vstack( (stereo_l, stereo_r))
 
             # save to file
-            classname = "cl"+str(count).zfill(2)+"-e"+str(elev)+"a"+str(az)
+            classname = "class"+str(count).zfill(2)+"-e"+str(elev)+"a"+str(az)
             if not os.path.exists(outpath+classname):
                     os.mkdir( outpath+classname)
             filename_no_ext = os.path.splitext(infile)[0]
             outfile = classname+'/'+filename_no_ext+'_'+classname+".wav"
-            print("    elev, az = ",elev,az,", outfile = ",outfile)
+            if not quiet:
+                print("\r    elev, az = ",elev,az,", outfile = ",outfile,"             ")
             librosa.output.write_wav(outfile,stereo_sig,sr)
+    if not quiet:
+        print("")
     return 
 
 
@@ -250,7 +253,7 @@ def main(args):
         if os.path.isfile(infile):
             print("   Binauralifying file",infile,"...")
             mono, sr = librosa.load(infile, sr=None)   # librosa naturally makes mono from stereo btw
-            project_multi(mono, infile, sr, (0,-180), (0, 180), (1,args.n_az))
+            project_multi(mono, infile, sr, (0,-180), (0, 180), (1,args.n_az), quiet=args.quiet)
         else:
             print("   *** File",infile,"does not exist.  Skipping.")
 
@@ -260,6 +263,8 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="binauralify: generate binaural samples from mono audio")
 #   parser.add_argument("n_elev", help="number of discrete poitions of elevation",type=int)
+    parser.add_argument("-q", "--quiet", help="quiet mode; reduce output",
+                    action="store_true")
     parser.add_argument("n_az", help="number of discrete poitions of azimuth",type=int)
     parser.add_argument('file', help="mono wav file(s) to binauralify", nargs='+')   
     args = parser.parse_args()

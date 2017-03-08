@@ -8,3 +8,5 @@ validation*
 compact*
 nohup.out
 *.hdf5
+binaural
+physionet2016

@@ -59,7 +59,7 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
             for idx2, infilename in enumerate(class_files):    # go through all files for this class
                 audio_path = dirname + '/' + infilename
                 #print(" audio_path = ",audio_path)
-                if (0 == idx2 % printevery):
+                if (0 == idx2 % printevery) or (idx2+1 == len(class_files)):
                     print("\r Processing class ",idx+1,"/",nb_classes,": \'",classname,
                         "\', File ",idx2+1,"/", n_load,": ",audio_path,"                  ", 
                         sep="",end="")

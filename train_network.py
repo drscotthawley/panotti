@@ -21,7 +21,7 @@ from os.path import isfile
 from timeit import default_timer as timer
 
 
-def train_network(wweights_file="weights.hdf5", classpath="Preproc/Train/"):
+def train_network(weights_file="weights.hdf5", classpath="Preproc/Train/"):
     np.random.seed(1)
 
     # get the data

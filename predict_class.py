@@ -22,7 +22,6 @@ def predict_class(signal, sr, class_names, model=None, weights_file="weights.hdf
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description="predicts which class file(s) belong(s) to")
-#   parser.add_argument("n_elev", help="number of discrete poitions of elevation",type=int)
     parser.add_argument('-w', '--weights', #nargs=1, type=argparse.FileType('r'), 
         help='weights file in hdf5 format', default="weights.hdf5")
     parser.add_argument('-c', '--classpath', #type=argparse.string, 

@@ -40,12 +40,12 @@ def fix_last_element(clip_list, axis):
 def split_audio(file_list, clip_dur=2, remove_orig=True):
     for infile in file_list:
         if os.path.isfile(infile):
-            print("Input file: ",infile,"... ",end="",sep="")
+            print("     Splitting file: ",infile," into ",clip_dur,"-second clips... ",end="",sep="")
             signal, sr = librosa.load(infile, sr=None, mono=False)   # don't assume sr or mono
             if (1 == signal.ndim):
-                print("this is a mono file.  signal.shape = ",signal.shape)
+                print("       this is a mono file.  signal.shape = ",signal.shape)
             else:
-                print("this is a multi-channel file: signal.shape = ",signal.shape)
+                print("       this is a multi-channel file: signal.shape = ",signal.shape)
             axis = signal.ndim - 1
             stride = clip_dur * sr                             # length of clip in samples
             indices = np.arange(stride,signal.shape[axis],stride)   # where to split
@@ -54,20 +54,20 @@ def split_audio(file_list, clip_dur=2, remove_orig=True):
 
             sections = int( np.ceil( signal.shape[axis] / stride) ) # just to check 
             if( sections != clips.shape[0]):                        # just in case
-                print("  **** Warning: sections = "+str(sections)+", but clips.shape[0] = "+str(clips.shape[0]) )
+                print("              **** Warning: sections = "+str(sections)+", but clips.shape[0] = "+str(clips.shape[0]) )
 
             for i in range(sections):
                 clip = clips[i]
                 filename_no_ext = os.path.splitext(infile)[0]
                 ext = '.wav' # os.path.splitext(infile)[1]
                 outfile = filename_no_ext+"_s"+str(i+1)+ext
-                print("      Saving file",outfile)
+                print("        Saving file",outfile)
                 librosa.output.write_wav(outfile,clip,sr)
 
             if remove_orig:
                 os.remove(infile)
         else:
-            print(" *** File",infile,"does not exist.  Skipping.")
+            print("     *** File",infile,"does not exist.  Skipping.")
     return
 
 

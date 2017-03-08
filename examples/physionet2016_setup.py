@@ -24,11 +24,12 @@ import shutil
 import sys
 from subprocess import call
 import glob
+import subprocess
 
 sys.path.insert(0, '../utils')
 from split_audio import *
 
-
+mainpath = "physionet2016"
 samplepath = "Samples/"
 trainpath = "Samples/Train/"
 testpath = "Samples/Test/"
@@ -66,6 +67,11 @@ def download_if_missing(dirname="training-f", filename="training.zip",
 
 # create the directories we need
 def make_dirs():
+    if not os.path.exists(mainpath):
+        print("Creating directory "+mainpath+"...")
+        os.mkdir( mainpath )
+        print("Changing directory to "+mainpath+"...")
+        os.chdir(mainpath)
     if not os.path.exists(samplepath):
         os.mkdir( samplepath )
         os.mkdir( trainpath )
@@ -133,7 +139,8 @@ def main():
     delete_test_dupes(class_names)
     chopup_clips(class_names)
 
-    print("\nFINISHED. Now run the following command:\n ../preprocess_data.py --already") 
+    print("\nFINISHED.")
+    print("Now run the following command:\n cd physionet2016; ../../preprocess_data.py --already") 
     return
 
 

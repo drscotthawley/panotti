@@ -248,11 +248,11 @@ def main(args):
     download_if_missing()                # make sure we've got the hrtf data we need
     for infile in args.file:
         if os.path.isfile(infile):
-            print("Operating on file",infile,"...")
+            print("   Binauralifying file",infile,"...")
             mono, sr = librosa.load(infile, sr=None)   # librosa naturally makes mono from stereo btw
             project_multi(mono, infile, sr, (0,-180), (0, 180), (1,args.n_az))
         else:
-            print(" *** File",infile,"does not exist.  Skipping.")
+            print("   *** File",infile,"does not exist.  Skipping.")
 
 
 

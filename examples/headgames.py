@@ -109,7 +109,7 @@ def draw_pie(screen,origin,screensize,n_az,guess_az, color=GREEN):
 
 
 ################ MAIN CODE #############
-def do_pygame(n_az=12):
+def do_pygame(n_az=12, weights_file="binaural/weights.hdf5"):
     # Define some colors
      
     # make a list of valid angles
@@ -156,7 +156,7 @@ def do_pygame(n_az=12):
                 infile = file_list[random.randint(0,len(file_list)-1)]
                 print("infile = ",infile)
                 signal, sr = librosa.load(infile, mono=False, sr=44100)   # librosa naturally makes mono from stereo btw
-                y_proba, model = predict_one(signal, sr, class_names, model=model, weights_file="binaural/weights.hdf5")
+                y_proba, model = predict_one(signal, sr, class_names, model=model, weights_file=weights_file)
                 guess_az = angles[ np.argmax(y_proba)]
                 # get true az from filename
                 true_az = parse_class_string(infile)
@@ -191,6 +191,13 @@ def do_pygame(n_az=12):
 
 
 if __name__ == "__main__":
-    print("headgames.py - Still under construction, for now it just shows an animation")
+    print("headgames.py - Still under construction\n")
+    if (not os.path.isdir("binaural")) or (not os.path.isdir("binaural/Samples")):
+        print("\nYou need to run ./binaural_setup.sh first.")
+        sys.exit(1)
+    weights_file="binaural/weights.hdf5"
+    if (not os.path.isfile(weights_file)):
+        print("Error, can't find weights file "+weights_file)
+        sys.exit(1)
     #TODO: First check for existence of files we need: binaural/, binaural/Samples, binaural/weights.hdf5
-    do_pygame(n_az=12)
+    do_pygame(n_az=12, weights_file=weights_file)

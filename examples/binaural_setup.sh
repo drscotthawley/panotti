@@ -34,7 +34,7 @@ N_AZ=12
 let "deg = 360/$N_AZ"
 
 # extension for audio files. "mp3"=less disk space, "wav"=better quality
-EXT=mp3
+EXT=wav
 
 
 # Check if sox exists
@@ -90,6 +90,6 @@ cd ..
 echo " "
 echo "FINISHED. Feel free to delete the Samples/ directory to free up $samples_size.  (Only Preproc/ is used in what follows.)"
 echo "Now run the following..."
-echo "  cd binaural; ../../train_network.py"
+echo "  cd binaural; $PANOTTI_HOME/train_network.py"
 echo " "
 

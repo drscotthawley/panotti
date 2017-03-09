@@ -11,7 +11,7 @@ from panotti.models import *
 from panotti.datautils import *
 
 
-def predict_class(signal, sr, class_names, model=None, weights_file="weights.hdf5"):
+def predict_one(signal, sr, class_names, model=None, weights_file="weights.hdf5"):
     X = make_layered_melgram(signal,sr)
     if model is None:
         model = load_model(X, class_names, no_cp_fatal=True, weights_file=weights_file)
@@ -44,7 +44,7 @@ if __name__ == '__main__':
             print("Operating on file",infile,"...")
 
             signal, sr = librosa.load(infile, mono=False, sr=44100)   # librosa naturally makes mono from stereo btw
-            y_proba, model = predict_class(signal, sr, class_names, model=model, weights_file=args.weights)
+            y_proba, model = predict_one(signal, sr, class_names, model=model, weights_file=args.weights)
 
             print("    ",infile,": ",end="")
             for i in range(nb_classes):

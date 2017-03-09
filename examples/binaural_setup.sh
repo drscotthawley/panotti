@@ -31,6 +31,10 @@ N_AUG=4
 N_AZ=12
 let "deg = 360/$N_AZ"
 
+# extension for audio files. "mp3"=less disk space, "wav"=better quality
+EXT=mp3
+
+
 # Check if sox exists
 command -v sox >/dev/null 2>&1 || { echo >&2 "I require sox but it's not installed. (Try 'sudo apt-get install sox'?) Aborting."; exit 1; }
 
@@ -41,7 +45,7 @@ echo " "
 echo "NOTICE: You are about to generate 14GB of data (12GB of audio and 2GB of spectrograms),"
 echo "        and the whole setup process will take at least 10 minutes."
 echo "        If you'd like less/more data (& time), abort this script and edit it, and" 
-echo "        decrease the values of SIGNAL_DUR, RATE, N_AUG and/or N_AZ."
+echo "        decrease the values of SIGNAL_DUR, RATE, N_AUG, N_AZ and/or EXT"
 echo " "
 read -p "Press ^C to abort now, or press enter to continue... "
 
@@ -50,29 +54,29 @@ echo "Creating directory binaural/..."
 mkdir -p binaural; cd binaural
 
 echo "Generating signals..."
-echo "      white noise..."; sox -r $RATE -n gen_white.wav synth $SIGNAL_DUR whitenoise
-echo "      pink noise..."; sox -r $RATE -n gen_pink.wav synth $SIGNAL_DUR pinknoise
-echo "      brown noise..."; sox -r $RATE -n gen_brown.wav synth $SIGNAL_DUR brownnoise
-echo "      tpdf noise..."; sox -r $RATE -n gen_tpdf.wav synth $SIGNAL_DUR tpdfnoise
-echo "      sine sweep..."; sox -r $RATE -n gen_sinesw.wav synth $SIGNAL_DUR sine 20-20000
-echo "      square sweep..."; sox -r $RATE -n gen_squaresw.wav synth $SIGNAL_DUR square 50-5000
-echo "      fmodded plucks..."; sox -n gen_pluck.wav  synth 1 pluck  synth 1 sine fmod 700-100 repeat $SIGNAL_DUR 
+echo "      white noise..."; sox -r $RATE -n gen_white.$EXT synth $SIGNAL_DUR whitenoise
+echo "      pink noise..."; sox -r $RATE -n gen_pink.$EXT synth $SIGNAL_DUR pinknoise
+echo "      brown noise..."; sox -r $RATE -n gen_brown.$EXT synth $SIGNAL_DUR brownnoise
+echo "      tpdf noise..."; sox -r $RATE -n gen_tpdf.$EXT synth $SIGNAL_DUR tpdfnoise
+echo "      sine sweep..."; sox -r $RATE -n gen_sinesw.$EXT synth $SIGNAL_DUR sine 20-20000
+echo "      square sweep..."; sox -r $RATE -n gen_squaresw.$EXT synth $SIGNAL_DUR square 50-5000
+echo "      fmodded plucks..."; sox -n gen_pluck.$EXT  synth 1 pluck  synth 1 sine fmod 700-100 repeat $SIGNAL_DUR 
 
 echo "Splitting into $CLIP_DUR -second clips..."
-python ../../utils/split_audio.py -r $CLIP_DUR *.wav
+python ../../utils/split_audio.py -r $CLIP_DUR *.$EXT
 
 echo "Augmenting dataset by a factor of $N_AUG..."
-python ../../utils/augment_audio.py -q $N_AUG *.wav
+python ../../utils/augment_audio.py -q $N_AUG *.$EXT
 
 echo "Binauralifying into $N_AZ discrete azimuthal locations..."
-python ../../utils/binauralify.py -q $N_AZ *.wav
+python ../../utils/binauralify.py -q $N_AZ *.$EXT
 
 echo "Moving clips to Samples/"
 mkdir -p Samples
 mv class* Samples/ 
 
 echo "Cleaing directory of all non-essential generated files"
-/bin/rm -f gen*.wav compact.tar.Z
+/bin/rm -f gen*.$EXT compact.tar.Z
 
 echo "Pre-procesing data (could take a while)..."
 python ../../preprocess_data.py

@@ -237,7 +237,8 @@ def project_multi(mono_sig, infile, sr, start, end, steps, quiet=False):
             if not os.path.exists(outpath+classname):
                     os.mkdir( outpath+classname)
             filename_no_ext = os.path.splitext(infile)[0]
-            outfile = classname+'/'+filename_no_ext+'_'+classname+".wav"
+            ext = os.path.splitext(infile)[1]
+            outfile = classname+'/'+filename_no_ext+'_'+classname+ext
             if not quiet:
                 print("\r    elev, az = ",elev,az,", outfile = ",outfile,"             ")
             librosa.output.write_wav(outfile,stereo_sig,sr)

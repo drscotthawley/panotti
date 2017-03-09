@@ -59,7 +59,7 @@ def split_audio(file_list, clip_dur=2, remove_orig=True):
             for i in range(sections):
                 clip = clips[i]
                 filename_no_ext = os.path.splitext(infile)[0]
-                ext = '.wav' # os.path.splitext(infile)[1]
+                ext = os.path.splitext(infile)[1]
                 outfile = filename_no_ext+"_s"+str(i+1)+ext
                 print("        Saving file",outfile)
                 librosa.output.write_wav(outfile,clip,sr)

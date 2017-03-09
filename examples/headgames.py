@@ -37,7 +37,7 @@ def draw_head(screen,origin,screensize):
  
 
 def draw_bounds(screen,origin,screensize,n_az):
-    radius = int(screensize[1]*.5)
+    radius = int(screensize[1]*.5)-2
     width = int(2)
     color = RED
     boundary = pygame.draw.circle(screen, color, origin, radius, width)
@@ -56,7 +56,7 @@ def draw_guess(screen,origin,screensize,n_az,guess_az):
     if guess_az is None:
         return
     color = GREEN
-    cx, cy, r  = origin[0],origin[1], int(screensize[1]*.5)
+    cx, cy, r  = origin[0],origin[1], int(screensize[1]*.5)-2
 
     guess_az_rad = guess_az*math.pi/180
     # Start list of polygon points
@@ -86,7 +86,7 @@ def do_pygame(n_az=12):
     screensize = (500, 500)
     screen = pygame.display.set_mode(screensize)
      
-    pygame.display.set_caption("My Game")
+    pygame.display.set_caption("Head Games")
      
     # Loop until the user clicks the close button.
     done = False
@@ -133,4 +133,4 @@ def do_pygame(n_az=12):
 
 if __name__ == "__main__":
     print("headgames.py - Still under construction, for now it just shows an animation")
-    do_pygame(n_az=16)
+    do_pygame(n_az=12)

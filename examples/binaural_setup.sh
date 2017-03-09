@@ -14,6 +14,8 @@
 #
 # TODO: Need checks to see if commands succeed
 
+# root directory of panotti
+PANOTTI_HOME=../../
 
 # duration of each generated signal, in seconds
 SIGNAL_DUR=40
@@ -63,13 +65,13 @@ echo "      square sweep..."; sox -r $RATE -n gen_squaresw.$EXT synth $SIGNAL_DU
 echo "      fmodded plucks..."; sox -n gen_pluck.$EXT  synth 1 pluck  synth 1 sine fmod 700-100 repeat $SIGNAL_DUR 
 
 echo "Splitting into $CLIP_DUR -second clips..."
-python ../../utils/split_audio.py -r $CLIP_DUR *.$EXT
+python $PANOTTI_HOME/utils/split_audio.py -r $CLIP_DUR *.$EXT
 
 echo "Augmenting dataset by a factor of $N_AUG..."
-python ../../utils/augment_audio.py -q $N_AUG *.$EXT
+python $PANOTTI_HOME/utils/augment_audio.py -q $N_AUG *.$EXT
 
 echo "Binauralifying into $N_AZ discrete azimuthal locations..."
-python ../../utils/binauralify.py -q $N_AZ *.$EXT
+python $PANOTTI_HOME/utils/binauralify.py -q $N_AZ *.$EXT
 
 echo "Moving clips to Samples/"
 mkdir -p Samples
@@ -79,7 +81,7 @@ echo "Cleaing directory of all non-essential generated files"
 /bin/rm -f gen*.$EXT compact.tar.Z
 
 echo "Pre-procesing data (could take a while)..."
-python ../../preprocess_data.py
+python $PANOTTI_HOME/preprocess_data.py
 
 samples_size=$(du -smh Samples | awk '{print $1}')
 

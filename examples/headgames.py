@@ -12,6 +12,7 @@ Requirements:
 '''
 from __future__ import print_function
 import pygame
+import pygame.gfxdraw
 import math
 import librosa
 import os
@@ -54,24 +55,31 @@ def draw_head(screen,origin,screensize):
     cx, cy, scale  = origin[0],origin[1], int(screensize[1]/4)
     headsize = (int(scale*2/3),scale)
     headbox = (cx-headsize[0]/2, int(cy-scale/2), headsize[0], headsize[1])
-    head = pygame.draw.ellipse(screen, color, headbox)
+    rx, ry = int(headsize[0]/2), int(headsize[1]/2)
+    pygame.gfxdraw.filled_ellipse(screen, cx, cy, rx, ry, color)
+    pygame.gfxdraw.aaellipse(screen, cx, cy, rx, ry, color)
+    #head = pygame.draw.ellipse(screen, color, headbox)
     noserad = int(scale/15)
     nose = pygame.draw.circle(screen, color, (cx,int(headbox[1]+noserad/4)), noserad  )
     earw = scale/10
     earh = scale/4
     hw = headsize[0]
-    earbox_l = (cx-hw/2-earw/2, cy-earh/2, earw, earh)
-    earbox_r = (cx+hw/2-earw/2, earbox_l[1], earbox_l[2], earbox_l[3])
-    ear_l = pygame.draw.ellipse(screen, color, earbox_l )
-    ear_r = pygame.draw.ellipse(screen, color, earbox_r )
-    return head
+    earrx, earry = int(scale/20), int(scale/8)
+    pygame.gfxdraw.filled_ellipse(screen, cx-rx, cy, earrx, earry, color)
+    pygame.gfxdraw.aaellipse(screen, cx-rx, cy, earrx, earry, color)
+    pygame.gfxdraw.filled_ellipse(screen, cx+rx, cy, earrx, earry, color)
+    pygame.gfxdraw.aaellipse(screen, cx+rx, cy, earrx, earry, color)
+    return 
  
 
 def draw_bounds(screen,origin,screensize,n_az):
-    radius = int(screensize[1]*.5)-2
+    radius = int(screensize[1]*.5)-10
     width = int(2)
     color = RED
-    boundary = pygame.draw.circle(screen, color, origin, radius, width)
+    x, y, r = origin[0], origin[1], radius
+    boundary = pygame.gfxdraw.aacircle(screen, x, y, r, color)
+    #boundary = pygame.draw.circle(screen, color, origin, radius, width)
+
 
     # draw a bunch of lines
     radian_sweep = 2*math.pi / n_az
@@ -86,7 +94,7 @@ def draw_bounds(screen,origin,screensize,n_az):
 def draw_pie(screen,origin,screensize,n_az,guess_az, color=GREEN):
     if guess_az is None:
         return
-    cx, cy, r  = origin[0],origin[1], int(screensize[1]*.5)-2
+    cx, cy, r  = origin[0],origin[1], int(screensize[1]*.5)-10
 
     guess_az_rad = guess_az*math.pi/180
     # Start list of polygon points

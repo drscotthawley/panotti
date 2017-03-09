@@ -137,7 +137,7 @@ def do_pygame(n_az=12, weights_file="binaural/weights.hdf5"):
      
     # Set the width and height of the screen [width, height]
     screensize = (500, 500)
-    screen = pygame.display.set_mode(screensize)
+    screen = pygame.display.set_mode(screensize,pygame.RESIZABLE)
      
     pygame.display.set_caption("Head Games")
      
@@ -155,7 +155,10 @@ def do_pygame(n_az=12, weights_file="binaural/weights.hdf5"):
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 done = True
-     
+            if event.type == pygame.VIDEORESIZE:
+                screensize = (event.w, event.h)
+                screen = pygame.display.set_mode(screensize,pygame.RESIZABLE)
+
         # --- Game logic should go here
             if event.type == pygame.MOUSEBUTTONUP:
                 guess_az = guess_az + deg_inc

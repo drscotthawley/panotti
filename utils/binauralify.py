@@ -233,7 +233,7 @@ def project_multi(mono_sig, infile, sr, start, end, steps, quiet=False):
             stereo_sig = np.vstack( (stereo_l, stereo_r))
 
             # save to file
-            classname = "class"+str(count).zfill(2)+"-e"+str(elev)+"a"+str(az)
+            classname = "class"+str(count).zfill(2)+"-"+"a"+str(az)#+"e"+str(elev)+ # can add elevation if you want
             if not os.path.exists(outpath+classname):
                     os.mkdir( outpath+classname)
             filename_no_ext = os.path.splitext(infile)[0]

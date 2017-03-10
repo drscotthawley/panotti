@@ -46,7 +46,7 @@ def get_wav_file_list(path="binaural/Samples/",shuffle=True):
 
 def parse_class_string(filename):
     str = re.search('class.*\/',filename).group(0)[0:-1]
-    str2 = re.search('0a.*\.',str).group(0)[2:-1]
+    str2 = re.search('-a.*\.',str).group(0)[2:-1]
     return float(str2)
 
 def draw_head(screen,origin,screensize):

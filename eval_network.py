@@ -97,7 +97,7 @@ def eval_network(weights_file="weights.hdf5", classpath="Preproc/Test/"):
     plt.figure()
     lw = 2                      # line width
     for i in range(n_classes):
-        plt.plot(fpr[i], tpr[i], lw=lw, label='class '+class_names[i]+": AUC="+str(roc_auc[i]))
+        plt.plot(fpr[i], tpr[i], lw=lw, label=class_names[i]+": AUC="+'{0:.4f}'.format(roc_auc[i]))
     plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])

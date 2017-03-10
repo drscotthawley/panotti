@@ -18,7 +18,7 @@ import librosa
 import os
 import sys
 sys.path.insert(0, '..')
-from panotti.models import *  
+from keras.models import load_model
 from panotti.datautils import *
 #from predict_class import predict_one
 import glob
@@ -26,17 +26,16 @@ import random
 import re
 
 BLACK = (0, 0, 0)
+DARKGREY = (55,55,55)
 WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 RED = (255, 0, 0)
 
 
-def predict_one(signal, sr, class_names, model=None, weights_file="weights.hdf5"):
+def predict_one(signal, sr, class_names, model, weights_file="weights.hdf5"):
     X = make_layered_melgram(signal,sr)
-    if model is None:
-        model = load_model(X, class_names, no_cp_fatal=True, weights_file=weights_file)
-    return model.predict_proba(X,batch_size=1,verbose=0)[0], model
+    return model.predict_proba(X,batch_size=1,verbose=0)[0]
 
 
 def get_wav_file_list(path="binaural/Samples/",shuffle=True):
@@ -51,35 +50,59 @@ def parse_class_string(filename):
     return float(str2)
 
 def draw_head(screen,origin,screensize):
-    color=BLACK
+    color=DARKGREY
     cx, cy, scale  = origin[0],origin[1], int(screensize[1]/4)
     headsize = (int(scale*2/3),scale)
-    headbox = (cx-headsize[0]/2, int(cy-scale/2), headsize[0], headsize[1])
     rx, ry = int(headsize[0]/2), int(headsize[1]/2)
-    pygame.gfxdraw.filled_ellipse(screen, cx, cy, rx, ry, color)
-    pygame.gfxdraw.aaellipse(screen, cx, cy, rx, ry, color)
-    #head = pygame.draw.ellipse(screen, color, headbox)
-    noserad = int(scale/15)
-    nose = pygame.draw.circle(screen, color, (cx,int(headbox[1]+noserad/4)), noserad  )
-    earw = scale/10
-    earh = scale/4
-    hw = headsize[0]
+
+    #ears
+    color=BLACK
+    earw, earh = scale/10, scale/4
     earrx, earry = int(scale/20), int(scale/8)
     pygame.gfxdraw.filled_ellipse(screen, cx-rx, cy, earrx, earry, color)
     pygame.gfxdraw.aaellipse(screen, cx-rx, cy, earrx, earry, color)
     pygame.gfxdraw.filled_ellipse(screen, cx+rx, cy, earrx, earry, color)
     pygame.gfxdraw.aaellipse(screen, cx+rx, cy, earrx, earry, color)
+
+
+    # head proper
+    color = DARKGREY
+
+    headbox = (cx-headsize[0]/2, int(cy-scale/2), headsize[0], headsize[1])
+    pygame.gfxdraw.filled_ellipse(screen, cx, cy, rx, ry, color)
+    pygame.gfxdraw.aaellipse(screen, cx, cy, rx, ry, color)
+    #head = pygame.draw.ellipse(screen, color, headbox)
+    #nose
+    noserad = int(scale/15)
+    nose = pygame.draw.circle(screen, color, (cx,int(headbox[1]+noserad/4)), noserad  )
+
     return 
  
+def draw_probs(screen,origin,screensize,angles,probs):
+    n_az = len(angles)
+    radius = int(screensize[1]*.38)
+    fontsize = int(radius/6)
+    myfont = pygame.font.SysFont('Comic Sans MS', fontsize)
+    color = BLUE
 
-def draw_bounds(screen,origin,screensize,n_az):
+    # draw a bunch of lines
+    for i in range(n_az):               # draw a bunch of bounds
+        rad = angles[i] * math.pi/180
+        x = int( origin[0] + radius * math.sin(rad) - 0.7*fontsize)
+        y = int( origin[1] - radius * math.cos(rad) - 0.3*fontsize)
+        textsurface = myfont.render('{0:.3f}'.format(probs[i]).lstrip('0'), True, color)
+        screen.blit(textsurface,(x,y))
+    return
+
+
+def draw_bounds(screen,origin,screensize,angles):
+    n_az = len(angles)
     radius = int(screensize[1]*.5)-10
     width = int(2)
-    color = RED
+    color = BLUE
     x, y, r = origin[0], origin[1], radius
     boundary = pygame.gfxdraw.aacircle(screen, x, y, r, color)
     #boundary = pygame.draw.circle(screen, color, origin, radius, width)
-
 
     # draw a bunch of lines
     radian_sweep = 2*math.pi / n_az
@@ -91,7 +114,9 @@ def draw_bounds(screen,origin,screensize,n_az):
         pygame.draw.line(screen, color, startpos, endpos)
     return
 
-def draw_pie(screen,origin,screensize,n_az,guess_az, color=GREEN):
+def draw_pie(screen,origin,screensize,angles,guess_az, color=GREEN):
+    n_az = len(angles)
+
     if guess_az is None:
         return
     cx, cy, r  = origin[0],origin[1], int(screensize[1]*.5)-10
@@ -124,16 +149,23 @@ def do_pygame(n_az=12, weights_file="binaural/weights.hdf5"):
     angles = []
     deg_sweep = 360/n_az
     for n in range(n_az):
-        angles.append(-180+n*deg_sweep)
-    #print("angles = ",angles)
+        angles.append(-180+ n*deg_sweep)
+    print("angles = ",angles)
     file_list=get_wav_file_list()
-    print("len(file_list) = ",len(file_list))
 
-    class_names=get_class_names(path="binaural/Samples/", sort=True)
-    model = None
+    class_names=angles  # get_class_names(path="binaural/Samples/", sort=True)
+
+    # Load the model
+    print("Loading model...")
+    model = load_model(weights_file)
+    if model is None:
+        print("No weights file found.  Aborting")
+        exit(1)
+    model.summary()
 
 
     pygame.init()
+    pygame.font.init()
      
     # Set the width and height of the screen [width, height]
     screensize = (500, 500)
@@ -149,6 +181,7 @@ def do_pygame(n_az=12, weights_file="binaural/weights.hdf5"):
     guess_az = 0.0
     true_az = 0.0
     deg_inc = 360/n_az
+    probs = None
     # -------- Main Program Loop -----------
     while not done:
         # --- Main event loop
@@ -167,11 +200,12 @@ def do_pygame(n_az=12, weights_file="binaural/weights.hdf5"):
                 infile = file_list[random.randint(0,len(file_list)-1)]
                 print("infile = ",infile)
                 signal, sr = librosa.load(infile, mono=False, sr=44100)   # librosa naturally makes mono from stereo btw
-                y_proba, model = predict_one(signal, sr, class_names, model=model, weights_file=weights_file)
-                guess_az = angles[ np.argmax(y_proba)]
+                probs  = predict_one(signal, sr, class_names, model, weights_file=weights_file)
+                print("     probs = ",probs)
+                guess_az = angles[ np.argmax(probs)]
                 # get true az from filename
                 true_az = parse_class_string(infile)
-                print("guess_az = ",guess_az,"true_az = ",true_az)
+                print("     guess_az, true_az = ",guess_az,", ",true_az,sep="")
 
 
         # --- Screen-clearing code goes here
@@ -185,12 +219,14 @@ def do_pygame(n_az=12, weights_file="binaural/weights.hdf5"):
      
         # --- Drawing code should go here
         origin = (int(screensize[0]/2),int(screensize[1]/2))
-        draw_pie(screen,origin,screensize,n_az,true_az,color=RED) # show true
-        draw_pie(screen,origin,screensize,n_az,guess_az) # show guess
-        draw_bounds(screen,origin,screensize,n_az)
-
+        draw_pie(screen,origin,screensize,angles,true_az,color=RED) # show true
+        draw_pie(screen,origin,screensize,angles,guess_az) # show guess
+        draw_bounds(screen,origin,screensize,angles)
         draw_head(screen,origin,screensize)
 
+        #draw (text) probabilities for different angles
+        if probs is not None:
+            draw_probs(screen,origin,screensize,angles,probs)
         # --- Go ahead and update the screen with what we've drawn.
         pygame.display.flip()
      

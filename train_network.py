@@ -29,7 +29,7 @@ def train_network(weights_file="weights.hdf5", classpath="Preproc/Train/"):
     X_test, Y_test, paths_test, class_names_test  = build_dataset(path=classpath+"../Test/")
     assert( class_names == class_names_test )
 
-    model = load_model(X_train, class_names, no_cp_fatal=False, weights_file=weights_file)
+    model = make_model(X_train, class_names, no_cp_fatal=False, weights_file=weights_file)
     checkpointer = ModelCheckpoint(filepath=weights_file, verbose=1, save_best_only=True)
 
 

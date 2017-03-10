@@ -15,6 +15,7 @@ import numpy as np
 import matplotlib
 matplotlib.use('TKAgg')
 
+from keras.models import  load_model
 import matplotlib.pyplot as plt
 import librosa
 import os
@@ -56,12 +57,19 @@ def count_mistakes(y_scores,Y_test,paths_test,class_names):
 def eval_network(weights_file="weights.hdf5", classpath="Preproc/Test/"):
     np.random.seed(1)
 
+    # Load the model
+    model = load_model(weights_file)
+    if model is None:
+        print("No weights file found.  Aborting")
+        exit(1)
+    model.summary()
+
     # get the data
     X_test, Y_test, paths_test, class_names = build_dataset(path=classpath)
     print("class names = ",class_names)
     n_classes = len(class_names)
 
-    model = load_model(X_test, class_names, no_cp_fatal=True, weights_file=weights_file)
+    #model = keras.models.load_model(weights_file)
                 
     batch_size = 100
     num_pred = X_test.shape[0]

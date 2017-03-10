@@ -11,12 +11,39 @@ from panotti.models import *
 from panotti.datautils import *
 
 
-def predict_one(signal, sr, class_names, model=None, weights_file="weights.hdf5"):
+def predict_one(signal, sr, class_names, model, weights_file="weights.hdf5"):
     X = make_layered_melgram(signal,sr)
-    if model is None:
-        model = load_model(X, class_names, no_cp_fatal=True, weights_file=weights_file)
-    return model.predict_proba(X,batch_size=1)[0], model
+    return model.predict_proba(X,batch_size=1)[0]
 
+
+def main(args):
+    np.random.seed(1)
+    # Load the model
+    model = load_model(weights_file)
+    if model is None:
+        print("No weights file found.  Aborting")
+        exit(1)
+    model.summary()
+
+    class_names = get_class_names(args.classpath)
+    nb_classes = len(class_names)
+
+    file_count = 0
+    for infile in args.file:
+        if os.path.isfile(infile):
+            file_count += 1
+            print("Operating on file",infile,"...")
+
+            signal, sr = librosa.load(infile, mono=False, sr=44100)   # librosa naturally makes mono from stereo btw
+            y_proba = predict_one(signal, sr, class_names, model, weights_file=args.weights)
+
+            print("    ",infile,": ",end="")
+            for i in range(nb_classes):
+                print( class_names[i],": ",y_proba[i],", ",end="",sep="")
+            print("--> ANSWER:", class_names[ np.argmax(y_proba)])
+        else:
+            print(" *** File",infile,"does not exist.  Skipping.")
+    return
 
 
 if __name__ == '__main__':
@@ -29,27 +56,9 @@ if __name__ == '__main__':
 
     parser.add_argument('file', help="file(s) to classify", nargs='+')   
     args = parser.parse_args()
-    model = None
-    print("args.weights =",args.weights)
-    print("args.classpath =",args.classpath)
 
-    np.random.seed(1)
-    class_names = get_class_names(args.classpath)
-    nb_classes = len(class_names)
+    main(args)
 
-    file_count = 0
-    for infile in args.file:
-        if os.path.isfile(infile):
-            file_count += 1
-            print("Operating on file",infile,"...")
 
-            signal, sr = librosa.load(infile, mono=False, sr=44100)   # librosa naturally makes mono from stereo btw
-            y_proba, model = predict_one(signal, sr, class_names, model=model, weights_file=args.weights)
 
-            print("    ",infile,": ",end="")
-            for i in range(nb_classes):
-                print( class_names[i],": ",y_proba[i],", ",end="",sep="")
-            print("--> ANSWER:", class_names[ np.argmax(y_proba)])
-        else:
-            print(" *** File",infile,"does not exist.  Skipping.")
- 
+

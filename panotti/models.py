@@ -10,7 +10,7 @@ dumbCNN:  This is kind of a mixture of Keun Woo Choi's code https://github.com/k
    and the MNIST classifier at https://github.com/fchollet/keras/blob/master/examples/mnist_cnn.py
 '''
 
-from keras.models import Sequential, Model
+from keras.models import Sequential, Model, load_model
 from keras.layers import Input, Dense, TimeDistributed, LSTM, Dropout, Activation
 from keras.layers import Convolution2D, MaxPooling2D, Flatten
 from keras.layers.normalization import BatchNormalization
@@ -30,6 +30,8 @@ def dumbCNN(X, nb_classes, nb_layers=4):
     nb_filters = 32  # number of convolutional filters = "feature maps"
     kernel_size = (3, 3)  # convolution kernel size
     pool_size = (2, 2)  # size of pooling area for max pooling
+    cl_dropout = 0.5    # conv. layer dropout
+    dl_dropout = 0.8    # dense layer dropout
 
     channels = X.shape[1]   # channels = 1 for mono, 2 for stereo
 
@@ -46,39 +48,42 @@ def dumbCNN(X, nb_classes, nb_layers=4):
         model.add(BatchNormalization(axis=1, mode=2))
         model.add(ELU(alpha=1.0))  
         model.add(MaxPooling2D(pool_size=pool_size))
-        model.add(Dropout(0.25))
+        model.add(Dropout(cl_dropout))
 
     model.add(Flatten())
     model.add(Dense(128))
     model.add(Activation('relu'))    # why not ELU? no reason. accident?
-    model.add(Dropout(0.5))
+    model.add(Dropout(dl_dropout))
     model.add(Dense(nb_classes))
     model.add(Activation("softmax"))
+    model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
     return model
 
 
 
 
-def load_model(X, class_names, nb_layers=4, try_checkpoint=True, 
+def make_model(X, class_names, nb_layers=4, try_checkpoint=True, 
     no_cp_fatal=False, weights_file='weights.hdf5'):
-    # make the model
-    model = dumbCNN(X, nb_classes=len(class_names), nb_layers=nb_layers)
-    model.compile(loss='categorical_crossentropy',
-              optimizer='adadelta',
-              metrics=['accuracy'])
-    model.summary()
 
+    model = None
+    from_scratch = True
     # Initialize weights using checkpoint if it exists.
     if (try_checkpoint): 
         print("Looking for previous weights...")
         if ( isfile(weights_file) ):
-            print ('Checkpoint file detected. Loading weights.')
-            model.load_weights(weights_file)
+            print ('Weights file detected. Loading from ',weights_file)
+            model = load_model(weights_file)
+            from_scratch = False
         else:
             if (no_cp_fatal):
-                raise Exception("No weights file detected; can't do anything.")
+                raise Exception("No weights file detected; can't do anything.  Aborting.")
             else:
-                print('No checkpoint file detected.  Starting from scratch.')
+                print('No weights file detected, so starting from scratch.')
+
+    if from_scratch:
+        model = dumbCNN(X, nb_classes=len(class_names), nb_layers=nb_layers)
+
+    model.summary()
 
     return model
 

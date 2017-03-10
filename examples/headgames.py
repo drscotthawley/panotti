@@ -88,10 +88,12 @@ def draw_probs(screen,origin,screensize,angles,probs):
     # draw a bunch of lines
     for i in range(n_az):               # draw a bunch of bounds
         rad = angles[i] * math.pi/180
-        x = int( origin[0] + radius * math.sin(rad) - 0.93*fontsize)
-        y = int( origin[1] - radius * math.cos(rad) - 0.5*fontsize)
-        textsurface = myfont.render('{0:.3f}'.format(probs[i]).lstrip('0'), True, color)
-        screen.blit(textsurface,(x,y))
+        text = myfont.render('{0:.3f}'.format(probs[i]).lstrip('0'), True, color)
+        tw, th = text.get_width(), text.get_height()
+        x = int( origin[0] + radius * math.sin(rad) - tw/2)
+        y = int( origin[1] - radius * math.cos(rad) - th/2)
+
+        screen.blit(text,(x,y))
     return
 
 

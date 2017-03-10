@@ -81,15 +81,15 @@ def draw_head(screen,origin,screensize):
 def draw_probs(screen,origin,screensize,angles,probs):
     n_az = len(angles)
     radius = int(screensize[1]*.38)
-    fontsize = int(radius/6)
-    myfont = pygame.font.SysFont('Comic Sans MS', fontsize)
+    fontsize = int(radius/7)
+    myfont = pygame.font.SysFont('arial', fontsize)
     color = BLUE
 
     # draw a bunch of lines
     for i in range(n_az):               # draw a bunch of bounds
         rad = angles[i] * math.pi/180
-        x = int( origin[0] + radius * math.sin(rad) - 0.7*fontsize)
-        y = int( origin[1] - radius * math.cos(rad) - 0.3*fontsize)
+        x = int( origin[0] + radius * math.sin(rad) - 0.93*fontsize)
+        y = int( origin[1] - radius * math.cos(rad) - 0.5*fontsize)
         textsurface = myfont.render('{0:.3f}'.format(probs[i]).lstrip('0'), True, color)
         screen.blit(textsurface,(x,y))
     return

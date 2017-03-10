@@ -11,6 +11,7 @@ Requirements:
     librosa
 '''
 from __future__ import print_function
+import numpy as np
 import pygame
 import pygame.gfxdraw
 import math
@@ -24,6 +25,7 @@ from panotti.datautils import *
 import glob
 import random
 import re
+import colorsys
 
 BLACK = (0, 0, 0)
 DARKGREY = (55,55,55)
@@ -31,6 +33,8 @@ WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 RED = (255, 0, 0)
+CYAN = (0, 255, 255)
+MAGENTA = (255, 0, 255)
 
 
 def predict_one(signal, sr, class_names, model, weights_file="weights.hdf5"):
@@ -75,26 +79,7 @@ def draw_head(screen,origin,screensize):
     #nose
     noserad = int(scale/15)
     nose = pygame.draw.circle(screen, color, (cx,int(headbox[1]+noserad/4)), noserad  )
-
     return 
- 
-def draw_probs(screen,origin,screensize,angles,probs):
-    n_az = len(angles)
-    radius = int(screensize[1]*.38)
-    fontsize = int(radius/7)
-    myfont = pygame.font.SysFont('arial', fontsize)
-    color = BLUE
-
-    # draw a bunch of lines
-    for i in range(n_az):               # draw a bunch of bounds
-        rad = angles[i] * math.pi/180
-        text = myfont.render('{0:.3f}'.format(probs[i]).lstrip('0'), True, color)
-        tw, th = text.get_width(), text.get_height()
-        x = int( origin[0] + radius * math.sin(rad) - tw/2)
-        y = int( origin[1] - radius * math.cos(rad) - th/2)
-
-        screen.blit(text,(x,y))
-    return
 
 
 def draw_bounds(screen,origin,screensize,angles):
@@ -116,12 +101,14 @@ def draw_bounds(screen,origin,screensize,angles):
         pygame.draw.line(screen, color, startpos, endpos)
     return
 
-def draw_pie(screen,origin,screensize,angles,guess_az, color=GREEN):
+def draw_pie(screen,origin,screensize,angles,guess_az,r_fac=1.0,color=GREEN):
     n_az = len(angles)
 
     if guess_az is None:
         return
-    cx, cy, r  = origin[0],origin[1], int(screensize[1]*.5)-10
+    cx, cy, r  = origin[0],origin[1], screensize[1]*.5-10
+    b = r/5
+    r = b + r_fac*(r-b) 
 
     guess_az_rad = guess_az*math.pi/180
     # Start list of polygon points
@@ -139,6 +126,52 @@ def draw_pie(screen,origin,screensize,angles,guess_az, color=GREEN):
     # Draw pie segment
     if len(p) > 2:
         pygame.draw.polygon(screen, color, p)
+    return
+
+
+
+def assign_sat(color, sout):
+    rgb_to_hsv = np.vectorize(colorsys.rgb_to_hsv)
+    hsv_to_rgb = np.vectorize(colorsys.hsv_to_rgb)
+
+    r,g,b = color[0]/255.0, color[1]/255.0, color[2]/255.0
+    #print("r,g,b =",r,g,b)
+    h, s, v = rgb_to_hsv(r,g,b)
+    #print("h,s,v=",h,s,v," sout=",sout)
+    s = sout
+    r, g, b = hsv_to_rgb(h, s, v)
+    r, g, b = int(255*r), int(255*g), int(255*b)
+    return (r,g,b)
+
+
+def draw_probs_text(screen,origin,screensize,angles,probs):
+    radius = int(screensize[1]*.38)
+    fontsize = int(radius/7)
+    myfont = pygame.font.SysFont('arial', fontsize)
+    for i in range(len(angles)):               # draw a bunch of bounds
+        rad = angles[i] * math.pi/180
+        if (probs[i]==np.max(probs)):
+            color=MAGENTA
+        else:
+            color=BLUE
+        text = myfont.render('{0:.3f}'.format(probs[i]).lstrip('0'), True, color)
+        tw, th = text.get_width(), text.get_height()
+        x = int( origin[0] + radius * math.sin(rad) - tw/2)
+        y = int( origin[1] - radius * math.cos(rad) - th/2)
+        screen.blit(text,(x,y))
+    return
+
+def draw_probs_pies(screen,origin,screensize,angles,probs,true_az):
+    radius = int(screensize[1]*.38)
+    guess_az = angles[ np.argmax(probs)]
+
+    for i in range(len(angles)):               # draw a bunch of bounds
+        rad = angles[i] * math.pi/180
+        piecolor = assign_sat(GREEN,probs[i])
+        draw_pie(screen,origin,screensize,angles,angles[i],color=piecolor )
+
+    draw_pie(screen,origin,screensize,angles,true_az,r_fac=1.04,color=RED )
+    draw_pie(screen,origin,screensize,angles,guess_az,color=assign_sat(GREEN,np.max(probs)))
     return
 
 
@@ -221,14 +254,14 @@ def do_pygame(n_az=12, weights_file="binaural/weights.hdf5"):
      
         # --- Drawing code should go here
         origin = (int(screensize[0]/2),int(screensize[1]/2))
-        draw_pie(screen,origin,screensize,angles,true_az,color=RED) # show true
-        draw_pie(screen,origin,screensize,angles,guess_az) # show guess
+        #draw (text) probabilities for different angles
+        if probs is not None:
+            draw_probs_pies(screen,origin,screensize,angles,probs,true_az)
+            draw_probs_text(screen,origin,screensize,angles,probs)
+
         draw_bounds(screen,origin,screensize,angles)
         draw_head(screen,origin,screensize)
 
-        #draw (text) probabilities for different angles
-        if probs is not None:
-            draw_probs(screen,origin,screensize,angles,probs)
         # --- Go ahead and update the screen with what we've drawn.
         pygame.display.flip()
      

@@ -56,6 +56,7 @@ echo "Creating directory binaural/..."
 mkdir -p binaural; cd binaural
 
 echo "Generating signals..."
+# e.g. sox -r 44.1k -n gen_white.wav synth 60 whitenoise
 echo "      white noise..."; sox -r $RATE -n gen_white.$EXT synth $SIGNAL_DUR whitenoise
 echo "      pink noise..."; sox -r $RATE -n gen_pink.$EXT synth $SIGNAL_DUR pinknoise
 echo "      brown noise..."; sox -r $RATE -n gen_brown.$EXT synth $SIGNAL_DUR brownnoise

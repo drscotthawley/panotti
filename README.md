@@ -1,19 +1,18 @@
 # Panotti
-Stereo Audio Classifier in Keras 
+Multi-Channel Audio Classifier in Keras 
 
 ![Panotti_IMG](https://upload.wikimedia.org/wikipedia/commons/a/af/Panoteanen.jpg)
 
-This is a version of my [audio-classifier-keras-cnn](https://github.com/drscotthawley/audio-classifier-keras-cnn) repo.  Please refer to that.
-
-Different with Panotti is it has been generalized beyond mono audio, to include stereo or even more "channels"
+This is a version of the [audio-classifier-keras-cnn](https://github.com/drscotthawley/audio-classifier-keras-cnn) repo (which is a hack of **@keunwoochoi**'s compact_cnn code, which is itself derivative of LeCun's work).  Difference with Panotti is, it has been generalized beyond mono audio, to include stereo or even more "channels."  And it's undergone many refinements.
 
 
 ## Dependencies
-* Python
+* Python (3.5 or 2.7)
 * numpy
 * keras
-* theano or tensorflow (as backends)
+* tensorflow or theano (as backends)
 * librosa
+* optional: pygame (for exampes/headgames.py)
 
 ## Quick Start
 * In `Samples/`, create  subdirectories for each class and put your audio files in them.
@@ -39,15 +38,18 @@ Also, `librosa` is going to turn stereo files into mono by, e.g. averaging the l
 *"Is there any sample data that comes with this repo?"*  Not the data itself, but check out the `examples/` directory. ;-)
 
 
-### Data preprocessing and/or augmentation:
-You don't *have* to preprocess or augment the data.  If you preprocess, the data-loading will go *much* faster (e.g., 100 times faster) the next time you try to train the network. So, preprocess.
+### Data augmentation & preprocessing:
+
+#### (Optional) Augmentation:
 
 The "augmentation" will [vary the speed, pitch, dynamics, etc.](https://bmcfee.github.io/papers/ismir2015_augmentation.pdf) of the sound files ("data") to try to "bootstrap" some extra data with which to train.  If you want to augment, then you'll run it as
 
 `$ python augment_data.py <N>  Samples/*/*`
 
-where N is how many augmented copies of each file you want it to create.  It will place all of these in the Samples/ directory with some kind of "_augX" appended to the filename (where X just counts the number of the augmented data files).
-*I haven't had great results with the augmentation yet; so for now I don't do it.*
+where *N* is how many augmented copies of each file you want it to create.  It will place all of these in the Samples/ directory with some kind of "_augX" appended to the filename (where X just counts the number of the augmented data files).
+
+#### (Required) Preprocessing:
+You don't *have* to preprocess or augment the data.  If you preprocess, the data-loading will go *much* faster (e.g., 100 times faster) the next time you try to train the network. So, preprocess.
 
 Preprocessing will generate mel-spectrograms of all data files, and create a "new version" of `Samples/` called `Preproc/`.
 
@@ -56,8 +58,6 @@ It will do an 80-20 split of the dataset, so within `Preproc/` will be the subdi
 To do the preprocessing you just run
 
 `$ python preprocess_data.py`
-
-...which currently doesn't DO any data augmentation, but I'm about to add that in *very* soon.
 
 
 ## Training & Evaluating the Network
@@ -88,6 +88,5 @@ This was achieved by running for 10 hours on [our workstation with an NVIDIA GTX
 **Future Work**: So, the Stein et al. data was a great test case, and now we have confidence to apply this method to other datasets.  I just got a new audio dataset I want to try, but it's small and will probably require some augmentation.  And, this github repo and the code itself are still not "cleaned up" for public reading/usage. 
 
 <hr>
--- [@drscotthawley](https://drscotthawley.github.io), March 2, 2017
+-- [@drscotthawley](https://drscotthawley.github.io), March 10, 2017
 
-PS- Thanks to [@WmHHooper](https://github.com/WmHHooper) for explaining what ROC & AUC mean.  I'm such a noob.

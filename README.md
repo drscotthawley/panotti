@@ -1,7 +1,8 @@
 # Panotti
 Multi-Channel Audio Classifier in Keras 
 
-![Panotti_IMG](https://upload.wikimedia.org/wikipedia/commons/a/af/Panoteanen.jpg)
+
+<img src="https://upload.wikimedia.org/wikipedia/commons/a/af/Panoteanen.jpg" alt="Panotti image" height="200">
 
 This is a version of the [audio-classifier-keras-cnn](https://github.com/drscotthawley/audio-classifier-keras-cnn) repo (which is a hack of **@keunwoochoi**'s compact_cnn code, which is itself derivative of LeCun's work).  Difference with Panotti is, it has been generalized beyond mono audio, to include stereo or even more "channels."  And it's undergone many refinements.
 

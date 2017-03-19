@@ -34,7 +34,6 @@ Example: for the [IDMT-SMT-Audio-Effects database](https://www.idmt.fraunhofer.d
     $
 (Within each subdirectory of `Samples`, there are loads of .wav or .mp3 files that correspond to each of those classes.)
 For now, it's assumed that all data files have the same length & sample rate.  
-Also, `librosa` is going to turn stereo files into mono by, e.g. averaging the left & right channels. 
 
 *"Is there any sample data that comes with this repo?"*  Not the data itself, but check out the `examples/` directory. ;-)
 

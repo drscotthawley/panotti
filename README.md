@@ -89,5 +89,5 @@ This was achieved by running for 10 hours on [our workstation with an NVIDIA GTX
 **Future Work**: So, the Stein et al. data was a great test case, and now we have confidence to apply this method to other datasets.  I just got a new audio dataset I want to try, but it's small and will probably require some augmentation.  And, this github repo and the code itself are still not "cleaned up" for public reading/usage. 
 
 <hr>
--- [@drscotthawley](https://drscotthawley.github.io), March 10, 2017
+-- [@drscotthawley](https://drscotthawley.github.io)
 

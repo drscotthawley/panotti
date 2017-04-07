@@ -4,7 +4,7 @@ concat_audio.py
 Author: Scott Hawley
 
 Joins a bunch of audio files into one big file.
-Filename of output is whatever the last filename is + "_L" (for "long")
+Filename of output is whatever the last filename is + "_Long" 
 
 Works on mono, stereo,...arbitrary numbers of channels
 
@@ -39,7 +39,7 @@ def main(args):
 
 	filename_no_ext = os.path.splitext(infile)[0]
 	ext = '.wav'  # os.path.splitext(infile)[1]
-	outfile = filename_no_ext+"_L"+ext
+	outfile = filename_no_ext+"_Long"+ext
 	print("Saving file",outfile)
 	librosa.output.write_wav(outfile,long_clip,sr)
 	return

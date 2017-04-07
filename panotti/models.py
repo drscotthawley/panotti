@@ -6,7 +6,7 @@ Author: Scott Hawley
 
 Where we'll put various NN models.
 
-dumbCNN:  This is kind of a mixture of Keun Woo Choi's code https://github.com/keunwoochoi/music-auto_tagging-keras
+MyCNN:  This is kind of a mixture of Keun Woo Choi's code https://github.com/keunwoochoi/music-auto_tagging-keras
    and the MNIST classifier at https://github.com/fchollet/keras/blob/master/examples/mnist_cnn.py
 '''
 
@@ -19,14 +19,14 @@ from os.path import isfile
 
 
 ''' 
-dumbCNN:  This is kind of a mixture of a dumbed-down versoin of Keun Woo Choi's 
+MyCNN:  This is kind of a mixture of a dumbed-down versoin of Keun Woo Choi's 
     compact CNN model  (https://github.com/keunwoochoi/music-auto_tagging-keras)
     and the Keras MNIST classifier example
             (https://github.com/fchollet/keras/blob/master/examples/mnist_cnn.py)
 
     Uses same kernel, filters and pool size for everything
 '''
-def dumbCNN(X, nb_classes, nb_layers=4):
+def MyCNN(X, nb_classes, nb_layers=4):
     nb_filters = 32  # number of convolutional filters = "feature maps"
     kernel_size = (3, 3)  # convolution kernel size
     pool_size = (2, 2)  # size of pooling area for max pooling
@@ -35,7 +35,7 @@ def dumbCNN(X, nb_classes, nb_layers=4):
 
     channels = X.shape[1]   # channels = 1 for mono, 2 for stereo
 
-    print(" dumbCNN: X.shape = ",X.shape,", channels = ",channels)
+    print(" MyCNN: X.shape = ",X.shape,", channels = ",channels)
     input_shape = (channels, X.shape[2], X.shape[3])  
     model = Sequential()
     model.add(Convolution2D(nb_filters, kernel_size[0], kernel_size[1],
@@ -81,7 +81,7 @@ def make_model(X, class_names, nb_layers=4, try_checkpoint=True,
                 print('No weights file detected, so starting from scratch.')
 
     if from_scratch:
-        model = dumbCNN(X, nb_classes=len(class_names), nb_layers=nb_layers)
+        model = MyCNN(X, nb_classes=len(class_names), nb_layers=nb_layers)
 
     model.summary()
 

@@ -26,7 +26,7 @@ from timeit import default_timer as timer
 
 
 def create(n, constructor=list):   # creates an list of empty lists
-    for _ in xrange(n):
+    for _ in range(n):
         yield constructor()
 
 def count_mistakes(y_scores,Y_test,paths_test,class_names):

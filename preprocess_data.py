@@ -11,7 +11,7 @@ import librosa.display
 import os
 
 
-def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0.8, resample=None, already_split=False):
+def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0.8, resample=None, already_split=False, sequential=False):
 
     if (resample is not None):
         print(" Will be resampling at",resample,"Hz")
@@ -24,6 +24,11 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
         print(" Will be imposing 80-20 (Train-Test) split")
         class_names = get_class_names(path=inpath)   # get the names of the subdirectories
         sampleset_subdirs = ["./"]
+
+    if (True == sequential):
+        print(" Sequential ordering")
+    else:
+        print(" Shuffling ordering")
 
     nb_classes = len(class_names)
     print("\nclass_names = ",class_names)
@@ -46,8 +51,10 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
             dirname = inpath+subdir+classname
             #print("dirname = ",dirname)
             class_files = os.listdir(dirname)   # all filenames for this class
+            class_files.sort()
             #print("class_files = ",class_files)
-            np.random.shuffle(class_files)   # shuffle directory listing (e.g. to avoid alphabetic order)
+            if (not sequential): # shuffle directory listing (e.g. to avoid alphabetic order)
+                np.random.shuffle(class_files)   # shuffle directory listing (e.g. to avoid alphabetic order)
     
             n_files = len(class_files)
             n_load = n_files            # sometimes we may multiple by a small # for debugging
@@ -89,6 +96,7 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description="binauralify: generate binaural samples from mono audio")
     parser.add_argument("-a", "--already", help="data is already split into Test & Train (default is to add 80-20 split",action="store_true")
+    parser.add_argument("-s", "--sequential", help="don't randomly shuffle data for train/test split",action="store_true")
     args = parser.parse_args()
-    preprocess_dataset(resample=44100, already_split=args.already)
+    preprocess_dataset(resample=44100, already_split=args.already, sequential=args.sequential)
 

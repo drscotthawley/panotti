@@ -48,8 +48,8 @@ def main(args):
 
 if __name__ == "__main__":
 	import argparse
-	parser = argparse.ArgumentParser(description="split_audio: splits file(s) into multiple clips")
-	parser.add_argument('file', help="file(s) to split", nargs='+')   
+	parser = argparse.ArgumentParser(description="concat_audio: concatenates multiple files into one")
+	parser.add_argument('file', help="file(s) to concat", nargs='+')   
 	args = parser.parse_args()
 	main(args)
 

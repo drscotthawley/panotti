@@ -41,7 +41,7 @@ def MyCNN(X, nb_classes, nb_layers=4):
     model.add(Convolution2D(nb_filters, kernel_size[0], kernel_size[1],
                         border_mode='valid', input_shape=input_shape))
     model.add(BatchNormalization(axis=1, mode=2))
-    model.add(Activation('relu'))   # why not ELU? no reason. accident?
+    model.add(Activation('relu'))   
 
     for layer in range(nb_layers-1):   # add more layers than just the first
         model.add(Convolution2D(nb_filters, kernel_size[0], kernel_size[1]))
@@ -52,7 +52,7 @@ def MyCNN(X, nb_classes, nb_layers=4):
 
     model.add(Flatten())
     model.add(Dense(128))
-    model.add(Activation('relu'))    # why not ELU? no reason. accident?
+    model.add(Activation('relu'))    
     model.add(Dropout(dl_dropout))
     model.add(Dense(nb_classes))
     model.add(Activation("softmax"))

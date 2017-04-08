@@ -55,12 +55,12 @@ def split_audio(file_list, clip_dur=2, remove_orig=True):
             sections = int( np.ceil( signal.shape[axis] / stride) ) # just to check 
             if( sections != clips.shape[0]):                        # just in case
                 print("              **** Warning: sections = "+str(sections)+", but clips.shape[0] = "+str(clips.shape[0]) )
-
+            ndigits = len(str(sections))   # find out # digits needed to print section #s
             for i in range(sections):
                 clip = clips[i]
                 filename_no_ext = os.path.splitext(infile)[0]
                 ext = os.path.splitext(infile)[1]
-                outfile = filename_no_ext+"_s"+str(i+1)+ext
+                outfile = filename_no_ext+"_s"+'{num:{fill}{width}}'.format(num=i+1, fill='0', width=ndigits)+ext
                 print("        Saving file",outfile)
                 librosa.output.write_wav(outfile,clip,sr)
 

@@ -127,7 +127,8 @@ def build_dataset(path="Preproc/Train/", load_frac=1.0):
                     sep="",end="")
 
             melgram = np.load(audio_path)
-            
+            if (melgram.shape != mel_dims):
+                print("\n\n    ERROR: mel_dims = ",mel_dims,", melgram.shape = ",melgram.shape) 
             X[load_count,:,:] = melgram
             Y[load_count,:] = this_Y
             paths.append(audio_path)     

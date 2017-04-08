@@ -15,7 +15,7 @@ import numpy as np
 import librosa
 from panotti.models import *
 from panotti.datautils import *
-from keras.callbacks import ModelCheckpoint, EarlyStopping
+from keras.callbacks import ModelCheckpoint #,EarlyStopping
 import os
 from os.path import isfile
 from timeit import default_timer as timer
@@ -33,12 +33,12 @@ def train_network(weights_file="weights.hdf5", classpath="Preproc/Train/"):
     # Train the model, meter with auto-split of 25% of training data
     #   (So, given original Train/Test split of 80/20%, we end up with 
     #    Train/Val/Test split of 60/20/20, as Andrew Ng recommends in his ML course )
-    batch_size = 100
-    nb_epoch = 250
+    batch_size = 20
+    nb_epoch = 200
     checkpointer = ModelCheckpoint(filepath=weights_file, verbose=1, save_best_only=True)
-    earlystopping = EarlyStopping(patience=12)
+    #earlystopping = EarlyStopping(patience=12)
     model.fit(X_train, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
-          verbose=1, validation_split=0.25, callbacks=[checkpointer,earlystopping])
+          verbose=1, validation_split=0.25, callbacks=[checkpointer])
 
     # Score the model against Test dataset
     X_test, Y_test, paths_test, class_names_test  = build_dataset(path=classpath+"../Test/")

@@ -33,7 +33,7 @@ def MyCNN(X, nb_classes, nb_layers=4):
     kernel_size = (3, 3)  # convolution kernel size
     pool_size = (2, 2)  # size of pooling area for max pooling
     cl_dropout = 0.5    # conv. layer dropout
-    dl_dropout = 0.8    # dense layer dropout
+    dl_dropout = 0.6    # dense layer dropout
 
     channels = X.shape[1]   # channels = 1 for mono, 2 for stereo
 

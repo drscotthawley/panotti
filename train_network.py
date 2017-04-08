@@ -26,18 +26,21 @@ def train_network(weights_file="weights.hdf5", classpath="Preproc/Train/"):
 
     # get the data
     X_train, Y_train, paths_train, class_names = build_dataset(path=classpath)
+
+    # instantiate the model
+    model = make_model(X_train, class_names, no_cp_fatal=False, weights_file=weights_file)
+
+    # train the model, meter with auto-split validation of 12.5%
+    #                     (b/c 12.5% of 80 = 10, so we get a 70-10-20 split)
+    batch_size = 100
+    nb_epoch = 250
+    checkpointer = ModelCheckpoint(filepath=weights_file, verbose=1, save_best_only=True)
+    model.fit(X_train, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
+          verbose=1, validation_split=0.125, callbacks=[checkpointer])
+
+    # score the model
     X_test, Y_test, paths_test, class_names_test  = build_dataset(path=classpath+"../Test/")
     assert( class_names == class_names_test )
-
-    model = make_model(X_train, class_names, no_cp_fatal=False, weights_file=weights_file)
-    checkpointer = ModelCheckpoint(filepath=weights_file, verbose=1, save_best_only=True)
-
-
-    # train and score the model
-    batch_size = 100
-    nb_epoch = 200
-    model.fit(X_train, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
-          verbose=1, validation_data=(X_test, Y_test), callbacks=[checkpointer])
     score = model.evaluate(X_test, Y_test, verbose=0)
     print('Test score:', score[0])
     print('Test accuracy:', score[1])

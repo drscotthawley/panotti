@@ -71,7 +71,7 @@ def MyCNN_Keras2(X, nb_classes, nb_layers=4):
 
     channels = X.shape[1]   # channels = 1 for mono, 2 for stereo
 
-    print(" MyCNN: X.shape = ",X.shape,", channels = ",channels)
+    print(" MyCNN_Keras2: X.shape = ",X.shape,", channels = ",channels)
     input_shape = (channels, X.shape[2], X.shape[3])  
     model = Sequential()
     model.add(Conv2D(nb_filters, kernel_size,

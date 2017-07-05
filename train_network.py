@@ -50,7 +50,7 @@ def train_network(weights_file="weights.hdf5", classpath="Preproc/Train/"):
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser(description="evaluates network on testing dataset")
+    parser = argparse.ArgumentParser(description="trains network using training dataset")
     parser.add_argument('-w', '--weights', #nargs=1, type=argparse.FileType('r'), 
         help='weights file in hdf5 format', default="weights.hdf5")
     parser.add_argument('-c', '--classpath', #type=argparse.string, 

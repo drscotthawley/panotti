@@ -1,6 +1,6 @@
 from __future__ import print_function
 
-''' 
+'''
 panotti_models.py
 Author: Scott Hawley
 
@@ -20,8 +20,8 @@ from os.path import isfile
 from distutils.version import LooseVersion
 
 
-''' 
-MyCNN:  This is kind of a mixture of a dumbed-down versoin of Keun Woo Choi's 
+'''
+MyCNN:  This is kind of a mixture of a dumbed-down versoin of Keun Woo Choi's
     compact CNN model  (https://github.com/keunwoochoi/music-auto_tagging-keras)
     and the Keras MNIST classifier example
             (https://github.com/fchollet/keras/blob/master/examples/mnist_cnn.py)
@@ -38,23 +38,23 @@ def MyCNN(X, nb_classes, nb_layers=4):
     channels = X.shape[1]   # channels = 1 for mono, 2 for stereo
 
     print(" MyCNN: X.shape = ",X.shape,", channels = ",channels)
-    input_shape = (channels, X.shape[2], X.shape[3])  
+    input_shape = (channels, X.shape[2], X.shape[3])
     model = Sequential()
     model.add(Convolution2D(nb_filters, kernel_size[0], kernel_size[1],
                         border_mode='valid', input_shape=input_shape))
     model.add(BatchNormalization(axis=1, mode=2))
-    model.add(Activation('relu'))   
+    model.add(Activation('relu'))
 
     for layer in range(nb_layers-1):   # add more layers than just the first
         model.add(Convolution2D(nb_filters, kernel_size[0], kernel_size[1]))
         model.add(BatchNormalization(axis=1, mode=2))
-        model.add(ELU(alpha=1.0))  
+        model.add(ELU(alpha=1.0))
         model.add(MaxPooling2D(pool_size=pool_size))
         model.add(Dropout(cl_dropout))
 
     model.add(Flatten())
     model.add(Dense(128))
-    model.add(Activation('relu'))    
+    model.add(Activation('relu'))
     model.add(Dropout(dl_dropout))
     model.add(Dense(nb_classes))
     model.add(Activation("softmax"))
@@ -63,6 +63,9 @@ def MyCNN(X, nb_classes, nb_layers=4):
 
 
 def MyCNN_Keras2(X, nb_classes, nb_layers=4):
+    from keras import backend as K
+    K.set_image_data_format('channels_first')
+
     nb_filters = 32  # number of convolutional filters = "feature maps"
     kernel_size = (3, 3)  # convolution kernel size
     pool_size = (2, 2)  # size of pooling area for max pooling
@@ -72,23 +75,23 @@ def MyCNN_Keras2(X, nb_classes, nb_layers=4):
     channels = X.shape[1]   # channels = 1 for mono, 2 for stereo
 
     print(" MyCNN_Keras2: X.shape = ",X.shape,", channels = ",channels)
-    input_shape = (channels, X.shape[2], X.shape[3])  
+    input_shape = (channels, X.shape[2], X.shape[3])
     model = Sequential()
-    model.add(Conv2D(nb_filters, kernel_size,
-                        border_mode='valid', input_shape=input_shape))
+    #model.add(Conv2D(nb_filters, kernel_size, border_mode='valid', input_shape=input_shape))
+    model.add(Conv2D(nb_filters, kernel_size, border_mode='valid', input_shape=input_shape))
     model.add(BatchNormalization(axis=1))
-    model.add(Activation('relu'))   
+    model.add(Activation('relu'))
 
     for layer in range(nb_layers-1):   # add more layers than just the first
         model.add(Conv2D(nb_filters, kernel_size))
         model.add(BatchNormalization(axis=1))
-        model.add(ELU(alpha=1.0))  
+        model.add(ELU(alpha=1.0))
         model.add(MaxPooling2D(pool_size=pool_size))
         model.add(Dropout(cl_dropout))
 
     model.add(Flatten())
     model.add(Dense(128))
-    model.add(Activation('relu'))    
+    model.add(Activation('relu'))
     model.add(Dropout(dl_dropout))
     model.add(Dense(nb_classes))
     model.add(Activation("softmax"))
@@ -98,13 +101,13 @@ def MyCNN_Keras2(X, nb_classes, nb_layers=4):
 
 
 
-def make_model(X, class_names, nb_layers=4, try_checkpoint=True, 
+def make_model(X, class_names, nb_layers=4, try_checkpoint=True,
     no_cp_fatal=False, weights_file='weights.hdf5'):
 
     model = None
     from_scratch = True
     # Initialize weights using checkpoint if it exists.
-    if (try_checkpoint): 
+    if (try_checkpoint):
         print("Looking for previous weights...")
         if ( isfile(weights_file) ):
             print ('Weights file detected. Loading from ',weights_file)
@@ -127,5 +130,3 @@ def make_model(X, class_names, nb_layers=4, try_checkpoint=True,
     model.summary()
 
     return model
-
-    

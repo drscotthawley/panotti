@@ -26,6 +26,8 @@ import glob
 import random
 import re
 import colorsys
+import argparse
+
 
 BLACK = (0, 0, 0)
 DARKGREY = (55,55,55)
@@ -43,6 +45,7 @@ def predict_one(signal, sr, class_names, model, weights_file="weights.hdf5"):
 
 
 def get_wav_file_list(path="binaural/Samples/",shuffle=True):
+    path = path.rstrip('/')   # remove any trailing slash
     file_list = glob.glob(path+"*/*.wav")
     if shuffle:
         random.shuffle(file_list)
@@ -79,7 +82,7 @@ def draw_head(screen,origin,screensize):
     #nose
     noserad = int(scale/15)
     nose = pygame.draw.circle(screen, color, (cx,int(headbox[1]+noserad/4)), noserad  )
-    return 
+    return
 
 
 def draw_bounds(screen,origin,screensize,angles):
@@ -108,7 +111,7 @@ def draw_pie(screen,origin,screensize,angles,guess_az,r_fac=1.0,color=GREEN):
         return
     cx, cy, r  = origin[0],origin[1], screensize[1]*.5-10
     b = r/5
-    r = b + r_fac*(r-b) 
+    r = b + r_fac*(r-b)
 
     guess_az_rad = guess_az*math.pi/180
     # Start list of polygon points
@@ -177,17 +180,17 @@ def draw_probs_pies(screen,origin,screensize,angles,probs,true_az):
 
 
 ################ MAIN CODE #############
-def do_pygame(n_az=12, weights_file="binaural/weights.hdf5"):
+def do_pygame(n_az=12, weights_file="binaural/weights.hdf5", wavpath="binaural/Samples/"):
     # Define some colors
-     
+
     # make a list of valid angles
     angles = []
     deg_sweep = 360/n_az
     for n in range(n_az):
         angles.append(-180+ n*deg_sweep)
     print("angles = ",angles)
-    file_list=get_wav_file_list()
-
+    file_list=get_wav_file_list(path=wavpath)
+    print("len of file_list in path ",wavpath," = ",len(file_list))
     class_names=angles  # get_class_names(path="binaural/Samples/", sort=True)
 
     # Load the model
@@ -201,16 +204,17 @@ def do_pygame(n_az=12, weights_file="binaural/weights.hdf5"):
 
     pygame.init()
     pygame.font.init()
-     
+
     # Set the width and height of the screen [width, height]
     screensize = (500, 500)
     screen = pygame.display.set_mode(screensize,pygame.RESIZABLE)
-     
+
     pygame.display.set_caption("Head Games")
-     
+
     # Loop until the user clicks the close button.
+    print("Every time you click the image, it will load a new file")
     done = False
-     
+
     # Used to manage how fast the screen updates
     clock = pygame.time.Clock()
     guess_az = 0.0
@@ -232,7 +236,9 @@ def do_pygame(n_az=12, weights_file="binaural/weights.hdf5"):
                 guess_az = guess_az + deg_inc
 
                 # load new file
-                infile = file_list[random.randint(0,len(file_list)-1)]
+                filenum = random.randint(0,len(file_list)-1)
+                print("filenum = ",filenum)
+                infile = file_list[filenum]
                 print("infile = ",infile)
                 signal, sr = librosa.load(infile, mono=False, sr=44100)   # librosa naturally makes mono from stereo btw
                 probs  = predict_one(signal, sr, class_names, model, weights_file=weights_file)
@@ -244,14 +250,14 @@ def do_pygame(n_az=12, weights_file="binaural/weights.hdf5"):
 
 
         # --- Screen-clearing code goes here
-     
+
         # Here, we clear the screen to white. Don't put other drawing commands
         # above this, or they will be erased with this command.
-     
+
         # If you want a background image, replace this clear with blit'ing the
         # background image.
         screen.fill(WHITE)
-     
+
         # --- Drawing code should go here
         origin = (int(screensize[0]/2),int(screensize[1]/2))
         #draw (text) probabilities for different angles
@@ -264,10 +270,10 @@ def do_pygame(n_az=12, weights_file="binaural/weights.hdf5"):
 
         # --- Go ahead and update the screen with what we've drawn.
         pygame.display.flip()
-     
+
         # --- Limit to 60 frames per second
         clock.tick(3)
-     
+
     # Close the window and quit.
     pygame.quit()
 
@@ -277,9 +283,21 @@ if __name__ == "__main__":
     if (not os.path.isdir("binaural")) or (not os.path.isdir("binaural/Samples")):
         print("\nYou need to run ./binaural_setup.sh first.")
         sys.exit(1)
-    weights_file="binaural/weights.hdf5"
+    parser = argparse.ArgumentParser(description="evaluates network on testing dataset")
+    parser.add_argument('-w', '--weights', #nargs=1, type=argparse.FileType('r'),
+        help='weights file in hdf5 format', default="binaural/weights.hdf5")
+    parser.add_argument('-n', '--naz', #type=argparse.string,
+        help='Number of azimuthal bins', default=12)
+    parser.add_argument('-d', '--dir', #type=argparse.string,
+            help='Directory containing test .wav files', default='binaural/Samples')
+
+    args = parser.parse_args()
+    weights_file=args.weights
+    n_az = int(args.naz)
+    print("n_az = ",n_az)
+    wavpath = args.dir
     if (not os.path.isfile(weights_file)):
         print("Error, can't find weights file "+weights_file)
         sys.exit(1)
     #TODO: First check for existence of files we need: binaural/, binaural/Samples, binaural/weights.hdf5
-    do_pygame(n_az=12, weights_file=weights_file)
+    do_pygame(n_az=n_az, weights_file=weights_file, wavpath=wavpath)

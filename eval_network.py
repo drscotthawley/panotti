@@ -1,25 +1,25 @@
 #! /usr/bin/env python
 
-''' 
+'''
 Classify sounds using database - evaluation code
 Author: Scott H. Hawley
 
 This is kind of a mixture of Keun Woo Choi's code https://github.com/keunwoochoi/music-auto_tagging-keras
    and the MNIST classifier at https://github.com/fchollet/keras/blob/master/examples/mnist_cnn.py
 
-Trained using Fraunhofer IDMT's database of monophonic guitar effects, 
+Trained using Fraunhofer IDMT's database of monophonic guitar effects,
    clips were 2 seconds long, sampled at 44100 Hz
 '''
 from __future__ import print_function
 import numpy as np
 import matplotlib
-matplotlib.use('TKAgg')
+matplotlib.use('Agg')
 
 from keras.models import  load_model
 import matplotlib.pyplot as plt
 import librosa
 import os
-from panotti.models import * 
+from panotti.models import *
 from panotti.datautils import *
 from sklearn.metrics import roc_auc_score, roc_curve, auc
 from timeit import default_timer as timer
@@ -70,11 +70,11 @@ def eval_network(weights_file="weights.hdf5", classpath="Preproc/Test/"):
     n_classes = len(class_names)
 
     #model = keras.models.load_model(weights_file)
-                
+
     batch_size = 100
     num_pred = X_test.shape[0]
 
-    
+
     print("Running predict_proba...")
     y_scores = model.predict_proba(X_test[0:num_pred,:,:,:],batch_size=batch_size)
 
@@ -94,7 +94,7 @@ def eval_network(weights_file="weights.hdf5", classpath="Preproc/Test/"):
     print("Global AUC = ",auc_score)
 
     print("\nDrawing ROC curves...")
-    plt.figure()
+    fig = plt.figure()
     lw = 2                      # line width
     for i in range(n_classes):
         plt.plot(fpr[i], tpr[i], lw=lw, label=class_names[i]+": AUC="+'{0:.4f}'.format(roc_auc[i]))
@@ -106,7 +106,11 @@ def eval_network(weights_file="weights.hdf5", classpath="Preproc/Test/"):
     plt.title('Receiver operating characteristic')
     plt.legend(loc="lower right")
     plt.draw()
-    plt.show(block=False)
+    #plt.show(block=False)
+    roc_filename = "roc_curves.png"
+    print("Saving curves to file",roc_filename)
+    plt.savefig(roc_filename)
+    plt.close(fig)
     print("")
 
     # evaluate the model
@@ -116,16 +120,16 @@ def eval_network(weights_file="weights.hdf5", classpath="Preproc/Test/"):
     print('Test accuracy:', scores[1])
 
     print("\nFinished.  Close plot window to return to shell.")
-    plt.show()
+    #plt.show()
     return
 
 
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description="evaluates network on testing dataset")
-    parser.add_argument('-w', '--weights', #nargs=1, type=argparse.FileType('r'), 
+    parser.add_argument('-w', '--weights', #nargs=1, type=argparse.FileType('r'),
         help='weights file in hdf5 format', default="weights.hdf5")
-    parser.add_argument('-c', '--classpath', #type=argparse.string, 
+    parser.add_argument('-c', '--classpath', #type=argparse.string,
         help='test dataset directory with list of classes', default="Preproc/Test/")
     args = parser.parse_args()
     eval_network(weights_file=args.weights, classpath=args.classpath)

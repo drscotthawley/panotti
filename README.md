@@ -19,7 +19,7 @@ This is a version of the [audio-classifier-keras-cnn](https://github.com/drscott
 * In `Samples/`, create  subdirectories for each class and put your audio files in them.
 * run `python preprocess_data.py`
 * run `python train_network.py`
-* run `python eval_network.py`  - This applies the train network to the testing dataset and gives you accuracy reports.
+* run `python eval_network.py`  - This applies the trained network to the testing dataset and gives you accuracy reports.
 
 
 ## Data Preparation

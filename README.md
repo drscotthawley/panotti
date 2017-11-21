@@ -19,7 +19,7 @@ This is a version of the [audio-classifier-keras-cnn](https://github.com/drscott
 * In `Samples/`, create  subdirectories for each class and put your audio files in them.
 * run `python preprocess_data.py`
 * run `python train_network.py`
-* optional: run `python eval_network.py`
+* run `python eval_network.py`  - This applies the train network to the testing dataset and gives you accuracy reports.
 
 
 ## Data Preparation
@@ -49,7 +49,7 @@ The "augmentation" will [vary the speed, pitch, dynamics, etc.](https://bmcfee.g
 where *N* is how many augmented copies of each file you want it to create.  It will place all of these in the Samples/ directory with some kind of "_augX" appended to the filename (where X just counts the number of the augmented data files).
 
 #### (Required) Preprocessing:
-You don't *have* to preprocess or augment the data.  If you preprocess, the data-loading will go *much* faster (e.g., 100 times faster) the next time you try to train the network. So, preprocess.
+When you preprocess, the data-loading will go *much* faster (e.g., 100 times faster) the next time you try to train the network. So, preprocess.
 
 Preprocessing will generate mel-spectrograms of all data files, and create a "new version" of `Samples/` called `Preproc/`.
 

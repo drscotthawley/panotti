@@ -94,7 +94,7 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser(description="binauralify: generate binaural samples from mono audio")
+    parser = argparse.ArgumentParser(description="preprocess_data.py: convert audio files to Python-friendly format for faster loading")
     parser.add_argument("-a", "--already", help="data is already split into Test & Train (default is to add 80-20 split",action="store_true")
     parser.add_argument("-s", "--sequential", help="don't randomly shuffle data for train/test split",action="store_true")
     args = parser.parse_args()

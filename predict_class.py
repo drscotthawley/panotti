@@ -19,6 +19,7 @@ def predict_one(signal, sr, class_names, model, weights_file="weights.hdf5"):
 def main(args):
     np.random.seed(1)
     # Load the model
+    weights_file=args.weights
     model = load_model(weights_file)
     if model is None:
         print("No weights file found.  Aborting")

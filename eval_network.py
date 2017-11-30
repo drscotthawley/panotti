@@ -116,8 +116,11 @@ def eval_network(weights_file="weights.hdf5", classpath="Preproc/Test/"):
     # evaluate the model
     print("Running model.evaluate...")
     scores = model.evaluate(X_test, Y_test, verbose=1, batch_size=batch_size)
-    print('Test score:', scores[0])
+    print('Test loss:', scores[0])
     print('Test accuracy:', scores[1])
+    print("All model scores:")
+    print(model.metrics_names)
+    print(scores)
 
     print("\nFinished.  Close plot window to return to shell.")
     #plt.show()

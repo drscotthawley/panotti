@@ -1,3 +1,4 @@
+
 #! /usr/bin/env python
 '''
 split_audio.py
@@ -18,10 +19,10 @@ import numpy as np
 import librosa
 import os
 
-def fix_last_element(clip_list, axis):
-    full_length = clip_list[0].shape[axis]
+def fix_last_element(clip_list, intended_length, axis):
+    #intended_length = clip_list[0].shape[axis]
     last_length = clip_list[-1].shape[axis]
-    num_zeros = full_length - last_length
+    num_zeros = intended_length - last_length
     if (num_zeros > 0):
         ndims = clip_list[-1].ndim
         pad_list = []
@@ -47,10 +48,13 @@ def split_audio(file_list, clip_dur=2, remove_orig=True):
             else:
                 print("       this is a multi-channel file: signal.shape = ",signal.shape)
             axis = signal.ndim - 1
+            signal_length = signal.shape[axis]
             stride = clip_dur * sr                             # length of clip in samples
-            indices = np.arange(stride,signal.shape[axis],stride)   # where to split
+            print("stride= ",stride,", signal_length = ", signal_length )                 
+            indices = np.arange(stride, signal_length,stride)   # where to split
             clip_list = np.split( signal, indices, axis=axis)       # do the splitting
-            clips = fix_last_element(clip_list, axis)               # what to do with last clip
+            intended_length = stride
+            clips = fix_last_element(clip_list, intended_length, axis) # what to do with last clip
 
             sections = int( np.ceil( signal.shape[axis] / stride) ) # just to check 
             if( sections != clips.shape[0]):                        # just in case
@@ -80,4 +84,3 @@ if __name__ == "__main__":
     parser.add_argument('file', help="file(s) to split", nargs='+')   
     args = parser.parse_args()
     split_audio(args.file, clip_dur=args.clip_dur, remove_orig=args.remove)
-

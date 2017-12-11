@@ -1,5 +1,5 @@
 h5py==2.6.0
-Keras==1.2.2
+keras==2.1.2
 librosa==0.5.0
 matplotlib==2.0.0
 numpy==1.12.0

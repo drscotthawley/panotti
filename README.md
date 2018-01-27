@@ -6,12 +6,13 @@ This is a version of the [audio-classifier-keras-cnn](https://github.com/drscott
 
 
 ## Dependencies
-* Python (3.5 or 2.7)
+* Python 3.5
 * numpy
 * keras
 * tensorflow or theano (as backends)
 * librosa
 * optional: pygame (for exampes/headgames.py), sox (SOund eXchange app; for generating test tones in binaural example)
+* optional: sox (for examples/binaural)
 
 ## Quick Start
 * In `Samples/`, create  subdirectories for each class and put your audio files in them.

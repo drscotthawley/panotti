@@ -1,5 +1,5 @@
 ''' 
-p_datautils.py:  Just some routines that we use for moving data around
+datautils.py:  Just some routines that we use for moving data around
 '''
 from __future__ import print_function
 import numpy as np
@@ -61,7 +61,7 @@ def shuffle_XY_paths(X,Y,paths):   # generates a randomized order, keeping X&Y(&
     np.random.shuffle(idx)
     newX = np.copy(X)
     newY = np.copy(Y)
-    newpaths = paths
+    newpaths = paths[:]
     for i in range(len(idx)):
         newX[i] = X[idx[i],:,:]
         newY[i] = Y[idx[i],:]

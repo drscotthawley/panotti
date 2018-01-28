@@ -31,7 +31,7 @@ def find_max_shape(path, mono=False, sr=None):
             except NoBackendError as e:
                 print("Could not open audio file {}".format(filepath))
                 raise e
-            shapes.append(get_cananonical_shape(signal))
+            shapes.append(get_canonical_shape(signal))
 
     return (max(s[0] for s in shapes), max(s[1] for s in shapes))
 
@@ -55,7 +55,7 @@ def convert_one_file(file_index):
         print("Could not open audio file {}".format(path))
         raise e
 
-    shape = get_cananonical_shape(signal)
+    shape = get_canonical_shape(signal)
     padded_signal = np.zeros(max_shape)
     padded_signal[:shape[0], :shape[1]] = signal
 

@@ -32,7 +32,6 @@ Example: for the [IDMT-SMT-Audio-Effects database](https://www.idmt.fraunhofer.d
     Tremolo/  Vibrato/
     $
 (Within each subdirectory of `Samples`, there are loads of .wav or .mp3 files that correspond to each of those classes.)
-For now, it's assumed that all data files have the same length & sample rate.  
 
 *"Is there any sample data that comes with this repo?"*  Not the data itself, but check out the `examples/` directory. ;-)
 
@@ -46,11 +45,12 @@ The "augmentation" will [vary the speed, pitch, dynamics, etc.](https://bmcfee.g
 `$ python augment_data.py <N>  Samples/*/*`
 
 where *N* is how many augmented copies of each file you want it to create.  It will place all of these in the Samples/ directory with some kind of "_augX" appended to the filename (where X just counts the number of the augmented data files).
+For augmentation it's assumed that all data files have the same length & sample rate.
 
 #### (Required) Preprocessing:
 When you preprocess, the data-loading will go *much* faster (e.g., 100 times faster) the next time you try to train the network. So, preprocess.
 
-Preprocessing will generate mel-spectrograms of all data files, and create a "new version" of `Samples/` called `Preproc/`.
+Preprocessing will pad the files with silence to fit the length to the length longest file and the number of channels to the file with the most channels. It will then generate mel-spectrograms of all data files, and create a "new version" of `Samples/` called `Preproc/`.
 
 It will do an 80-20 split of the dataset, so within `Preproc/` will be the subdirectories `Train/` and `Test/`. These will have the same subdirectory names as `Samples/`, but all the .wav and .mp3 files will have ".npy" on the end now.  Datafiles will be randomly assigned to `Train/` or `Test/`, and there they shall remain.
 

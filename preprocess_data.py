@@ -8,13 +8,36 @@ import numpy as np
 from panotti.datautils import *
 import librosa
 import librosa.display
+from audioread import NoBackendError
 import os
 from multiprocessing import Pool
 
 global_args = []    # after several hours of reading StackExchange on passing args w/ multiprocessing, I'm giving up and using globals
 
+def get_canonical_shape(signal):
+    if len(signal.shape) == 1:
+        return (1, signal.shape[0])
+    else:
+        return signal.shape
+
+
+def find_max_shape(path, mono=False, sr=None):
+    shapes = []
+    for dirname, dirnames, filenames in os.walk(path):
+        for filename in filenames:
+            filepath = os.path.join(dirname, filename)
+            try:
+                signal, sr = librosa.load(filepath, mono=mono, sr=sr)
+            except NoBackendError as e:
+                print("Could not open audio file {}".format(filepath))
+                raise e
+            shapes.append(get_canonical_shape(signal))
+
+    return (max(s[0] for s in shapes), max(s[1] for s in shapes))
+
+
 def convert_one_file(file_index):
-    (printevery, class_index, class_files, nb_classes, classname, n_load, dirname, resample, mono, already_split, n_train, outpath, subdir) = global_args
+    (printevery, class_index, class_files, nb_classes, classname, n_load, dirname, resample, mono, already_split, n_train, outpath, subdir, max_shape) = global_args
     infilename = class_files[file_index]
     audio_path = dirname + '/' + infilename
     if (0 == file_index % printevery) or (file_index+1 == len(class_files)):
@@ -25,9 +48,18 @@ def convert_one_file(file_index):
     sr = None
     if (resample is not None):
         sr = resample
-    signal, sr = librosa.load(audio_path, mono=mono, sr=sr)    # read audio file
 
-    layers = make_layered_melgram(signal, sr)
+    try:
+        signal, sr = librosa.load(audio_path, mono=mono, sr=sr)
+    except NoBackendError as e:
+        print("Could not open audio file {}".format(path))
+        raise e
+
+    shape = get_canonical_shape(signal)
+    padded_signal = np.zeros(max_shape)
+    padded_signal[:shape[0], :shape[1]] = signal
+
+    layers = make_layered_melgram(padded_signal, sr)
 
     if not already_split:
         if (file_index >= n_train):
@@ -61,6 +93,13 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
         print(" Sequential ordering")
     else:
         print(" Shuffling ordering")
+
+
+    max_shape = find_max_shape(inpath, mono, resample)
+    print(''' Padding all files with silence to fit shape:
+              Channels : {}
+              Samples  : {}
+          '''.format(max_shape[0], max_shape[1]))
 
     nb_classes = len(class_names)
     print("\nclass_names = ",class_names)
@@ -97,7 +136,7 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
 
             printevery = 20
 
-            global_args = (printevery, class_index, class_files, nb_classes, classname, n_load, dirname, resample, mono, already_split, n_train, outpath, subdir)
+            global_args = (printevery, class_index, class_files, nb_classes, classname, n_load, dirname, resample, mono, already_split, n_train, outpath, subdir, max_shape)
 
             parallel = True
             file_indices = tuple( range(len(class_files)) )

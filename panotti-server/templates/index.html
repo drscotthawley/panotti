@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <link rel="stylesheet" href="../static/styles.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+
+    <title>Panotti</title>
+  </head>
+  <body>
+    <div class="container">
+
+      <div class="jumbotron">
+        <h1 class="display-4">Panotti Server</h1>
+        <p class="lead">Organize your audio library with the help of neural nets.</p>
+      </div>
+
+      <div class="container">
+        <div class="row">
+          <div class="col-12">
+            <ul class="nav nav-tabs">
+              <li class="active"><a class="tab-text" data-toggle="tab" href="#home">Train the Neural Net</a></li>
+              <li><a class="tab-text" data-toggle="tab" href="#menu1">Sort Your Library</a></li>
+            </ul>
+
+            <div class="tab-content">
+
+              <div id="home" class="tab-pane fade in active">
+                <header class="tab-content-header">
+                  <h2>Training the Neural Net</h2>
+                  <p>Panotti Server is a cloud-based service that applies machine learning to the task of audio 'tagging'.
+                    This task is computation-intensive and beyond the capabilities of typical laptops, which is why we use GPU (graphics processing units) hosted in the cloud!<p>
+                  <p>Panotti Server can enable composers and producers to re-label their audio sample libraries
+                    according to genre, instrument, or even personal preferences.</p>
+                </header>
+                <form id="upload-form" action="{{ url_for('upload_train') }}" method="POST" enctype="multipart/form-data">
+                  <div class="submission-form">
+                    <span class="form-input fileUpload btn btn-primary btn-lg">
+                        <span>Upload Training Audio</span>
+                        <input type="file" name="file" class="upload" multiple>
+                    </span>
+                    <span class="form-input btn btn-primary btn-lg fileUpload">
+                      <span>Submit</span>
+                      <input type="submit" value= "Submit" class="upload">
+                    </span>
+                  </div>
+                </form>
+              </div>
+
+              <div id="menu1" class="tab-pane fade">
+                <header class="tab-content-header">
+                  <h2>Sorting Your Library</h2>
+                  <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut tempus feugiat volutpat. Aenean lacinia pretium consectetur. Maecenas sagittis dictum laoreet. Nam tempus turpis accumsan, elementum lacus eget, imperdiet lorem. Nam aliquet dignissim convallis. Mauris convallis fermentum urna, sed malesuada quam congue malesuada. In lectus lorem, pretium a urna nec, semper pharetra sapien. In venenatis, tellus eget rhoncus pharetra, eros erat hendrerit tellus, eu mollis elit est luctus nisl.</p>
+                </header>
+                <form id="upload-form" action="{{ url_for('upload_sort') }}" method="POST" enctype="multipart/form-data">
+                  <div class="submission-form">
+                    <span class="form-input fileUpload btn btn-primary btn-lg">
+                        <span>Upload Audio to Sort</span>
+                        <input type="file" name="file" class="upload"  multiple>
+                    </span>
+                    <span class="form-input fileUpload btn btn-primary btn-lg">
+                        <span>Upload Weights File</span>
+                        <input type="file" name="file" class="upload">
+                    </span>
+                    <div class="input-group input-group-lg file-path-input">
+                      <span class="input-group-addon" id="sizing-addon1">File Path</span>
+                      <input type="text" class="form-control" placeholder="File Path to Parent Directory" aria-describedby="sizing-addon1">
+                    </div>
+                    <span class="form-input btn btn-primary btn-lg fileUpload">
+                      <span>Submit</span>
+                      <input type="submit" value= "Submit" class="upload">
+                    </span>
+                  </div>
+                </form>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <!--
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+    -->
+  </body>
+</html>

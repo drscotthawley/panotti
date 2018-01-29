@@ -14,7 +14,7 @@ This is a version of the [audio-classifier-keras-cnn](https://github.com/drscott
 * matplotlib
 * h5py
 * optional: pygame (for exampes/headgames.py), sox (SOund eXchange app; for generating test tones in binaural example)
-* optional: sox ("Sound Xchange": command-line utility for examples/binaural. Install via "apt-get install sox")
+* optional: sox ("Sound eXchange": command-line utility for examples/binaural. Install via "apt-get install sox")
 
 ## Demo
 I'm not shipping this with any audio but you can generate some for the 'fake binaural' example (requires sox):

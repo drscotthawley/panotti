@@ -18,6 +18,11 @@
       <div class="jumbotron">
         <h1 class="display-4">Panotti Server</h1>
         <p class="lead">Organize your audio library with the help of neural nets.</p>
+        <p style="font-size:100%;">Panotti Server is a cloud-based service that applies machine learning to the task of audio 'tagging'.
+                    This task is computation-intensive and beyond the capabilities of typical laptops, which is why we use GPU (graphics processing units) hosted in the cloud!</smaller><p>
+                  <p style="font-size:100%">Panotti Server can enable composers and producers to re-label their audio sample libraries
+                    according to genre, instrument, or even personal preferences.</p>
+                </header>
       </div>
 
       <div class="container">
@@ -33,15 +38,11 @@
               <div id="home" class="tab-pane fade in active">
                 <header class="tab-content-header">
                   <h2>Training the Neural Net</h2>
-                  <p>Panotti Server is a cloud-based service that applies machine learning to the task of audio 'tagging'.
-                    This task is computation-intensive and beyond the capabilities of typical laptops, which is why we use GPU (graphics processing units) hosted in the cloud!<p>
-                  <p>Panotti Server can enable composers and producers to re-label their audio sample libraries
-                    according to genre, instrument, or even personal preferences.</p>
-                </header>
+		<p>On your computer, make a folder called Samples and inside it create sub-folders with the names of each category you want to train on.  Place your audio files in these sub-folders accordingly.  Then zip the Samples folder in order to upload it via this form.  Then click Submit.<br>
                 <form id="upload-form" action="{{ url_for('upload_train') }}" method="POST" enctype="multipart/form-data">
                   <div class="submission-form">
                     <span class="form-input fileUpload btn btn-primary btn-lg">
-                        <span>Upload Training Audio</span>
+                        <span>Upload Training Audio (Samples.zip)</span>
                         <input type="file" name="file" class="upload" multiple>
                     </span>
                     <span class="form-input btn btn-primary btn-lg fileUpload">
@@ -50,12 +51,15 @@
                     </span>
                   </div>
                 </form>
+                   (You may click the "Browse..." button or drag the file onto the button)</p>
               </div>
 
               <div id="menu1" class="tab-pane fade">
                 <header class="tab-content-header">
                   <h2>Sorting Your Library</h2>
-                  <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut tempus feugiat volutpat. Aenean lacinia pretium consectetur. Maecenas sagittis dictum laoreet. Nam tempus turpis accumsan, elementum lacus eget, imperdiet lorem. Nam aliquet dignissim convallis. Mauris convallis fermentum urna, sed malesuada quam congue malesuada. In lectus lorem, pretium a urna nec, semper pharetra sapien. In venenatis, tellus eget rhoncus pharetra, eros erat hendrerit tellus, eu mollis elit est luctus nisl.</p>
+                  <p>Select (or drag) as many files as you'd like to assign new tags to.<br>
+                     Optional: You may upload a network weights file of your own (i.e. your own categories), or use the weights already on the server.<br>
+                     Optional: "File Path" = ...?? working on it</p>
                 </header>
                 <form id="upload-form" action="{{ url_for('upload_sort') }}" method="POST" enctype="multipart/form-data">
                   <div class="submission-form">
@@ -65,7 +69,7 @@
                     </span>
                     <span class="form-input fileUpload btn btn-primary btn-lg">
                         <span>Upload Weights File</span>
-                        <input type="file" name="file" class="upload">
+                        <input type="file" name="file_weights" class="upload" value="server">
                     </span>
                     <div class="input-group input-group-lg file-path-input">
                       <span class="input-group-addon" id="sizing-addon1">File Path</span>

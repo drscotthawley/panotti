@@ -5,20 +5,33 @@
 This is a version of the [audio-classifier-keras-cnn](https://github.com/drscotthawley/audio-classifier-keras-cnn) repo (which is a hack of **@keunwoochoi**'s compact_cnn code).  Difference with Panotti is, it has been generalized beyond mono audio, to include stereo or even more "channels."  And it's undergone many refinements.
 
 
-## Dependencies
+## Dependencies (see requirements.txt)
 * Python 3.5
 * numpy
 * keras
-* tensorflow or theano (as backends)
+* tensorflow 
 * librosa
+* matplotlib
+* h5py
 * optional: pygame (for exampes/headgames.py), sox (SOund eXchange app; for generating test tones in binaural example)
-* optional: sox (for examples/binaural)
+* optional: sox ("Sound Xchange": command-line utility for examples/binaural. Install via "apt-get install sox")
+
+## Demo
+I'm not shipping this with any audio but you can generate some for the 'fake binaural' example (requires sox):
+
+    cd examples
+    ./binaural_setup.sh
+    cd binaural
+    ../../train_network.py
+
+*Coming Soon: Demo via new Panotti Server!  Watch this space.*
 
 ## Quick Start
-* In `Samples/`, create  subdirectories for each class and put your audio files in them.
+* Make a folder called `Samples/` and inside it create sub-folders with the names of each category you want to train on. Place your audio files in these sub-folders accordingly. 
 * run `python preprocess_data.py`
 * run `python train_network.py`
 * run `python eval_network.py`  - This applies the trained network to the testing dataset and gives you accuracy reports.
+
 
 
 ## Data Preparation

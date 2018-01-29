@@ -30,7 +30,7 @@ CLIP_DUR=2
 N_AUG=4
 
 # number of discrete azimuthal angles to use when generating binaural data
-N_AZ=12
+N_AZ=8
 let "deg = 360/$N_AZ"
 
 # extension for audio files. "mp3"=less disk space, "wav"=better quality
@@ -60,9 +60,9 @@ echo "Generating signals..."
 echo "      white noise..."; sox -r $RATE -n gen_white.$EXT synth $SIGNAL_DUR whitenoise
 echo "      pink noise..."; sox -r $RATE -n gen_pink.$EXT synth $SIGNAL_DUR pinknoise
 echo "      brown noise..."; sox -r $RATE -n gen_brown.$EXT synth $SIGNAL_DUR brownnoise
-echo "      tpdf noise..."; sox -r $RATE -n gen_tpdf.$EXT synth $SIGNAL_DUR tpdfnoise
+#echo "      tpdf noise..."; sox -r $RATE -n gen_tpdf.$EXT synth $SIGNAL_DUR tpdfnoise
 echo "      sine sweep..."; sox -r $RATE -n gen_sinesw.$EXT synth $SIGNAL_DUR sine 20-20000
-echo "      square sweep..."; sox -r $RATE -n gen_squaresw.$EXT synth $SIGNAL_DUR square 50-5000
+#echo "      square sweep..."; sox -r $RATE -n gen_squaresw.$EXT synth $SIGNAL_DUR square 50-5000
 echo "      fmodded plucks..."; sox -n gen_pluck.$EXT  synth 1 pluck  synth 1 sine fmod 700-100 repeat $SIGNAL_DUR 
 
 echo "Splitting into $CLIP_DUR -second clips..."

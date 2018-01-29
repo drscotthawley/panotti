@@ -20,3 +20,6 @@ according to genre, instrument, or even personal preferences.
 
 This starts an HTTP host on port 8000.  Once it's running, point your web browser to the URL of the machine running panotti-server,
 (e.g. http://127.0.0.1:8000 for localhost).
+
+## Screenshot:
+![screenshot](screenshot.png)

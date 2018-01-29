@@ -34,10 +34,10 @@ def train_network(weights_file="weights.hdf5", classpath="Preproc/Train/"):
     #   (So, given original Train/Test split of 80/20%, we end up with 
     #    Train/Val/Test split of 60/20/20, as Andrew Ng recommends in his ML course )
     batch_size = 20
-    nb_epoch = 200
+    epochs = 50
     checkpointer = ModelCheckpoint(filepath=weights_file, verbose=1, save_best_only=True)
     #earlystopping = EarlyStopping(patience=12)
-    model.fit(X_train, Y_train, batch_size=batch_size, nb_epoch=nb_epoch,
+    model.fit(X_train, Y_train, batch_size=batch_size, epochs=epochs,
           verbose=1, validation_split=0.25, callbacks=[checkpointer])
 
     # Score the model against Test dataset

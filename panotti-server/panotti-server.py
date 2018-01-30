@@ -32,7 +32,7 @@ def busy():
     return render_template('busy.html')
 
 
-#execution of the train submition
+# User uploads data for training
 @app.route("/upload_train", methods=["POST"])
 def upload_train():
     if os.path.exists('.lock'):             
@@ -52,7 +52,7 @@ def upload_train():
         print("filename = ",filename,", destination = ",destination)
         file.save(destination)
 
-    cmd = 'touch .lock; unzip '+destination+' | tee log.txt '
+    cmd = 'touch .lock; rm -rf Preproc Samples; unzip '+destination+' | tee log.txt '
     print('cmd = [',cmd,']')
     p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, shell=True)
     out,err = p.communicate()       # all the output and error will get sent to the browser
@@ -63,7 +63,7 @@ def upload_train():
 
 @app.route("/upload_preproc",methods=['GET','POST'])
 def upload_preproc():
-    cmd = '../preprocess_data.py -s | tee -a log.txt'
+    cmd = 'touch .lock; rm -f Samples.zip;  ../preprocess_data.py -s | tee -a log.txt'
     print('cmd = [',cmd,']')
     p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, shell=True)
     out,err = p.communicate()       # all the output and error will get sent to the browser
@@ -73,7 +73,7 @@ def upload_preproc():
 
 @app.route("/train",methods=['GET','POST'])
 def train():
-    cmd = '../train_network.py | tee -a log.txt;  rm .lock'
+    cmd = 'touch .lock; ../train_network.py --epochs=10 | tee -a log.txt;  rm -f .lock'
     print('cmd = [',cmd,']')
     p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, shell=True)
     out,err = p.communicate()       # all the output and error will get sent to the browser

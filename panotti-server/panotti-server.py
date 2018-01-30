@@ -4,21 +4,43 @@
 
 import os
 import subprocess
-from flask import Flask, request, render_template, send_file 
+from flask import Flask, request, render_template, send_file, send_from_directory
 import shutil
 import time
+from jinja2 import Markup
+import os
+
 app = Flask(__name__)
 
 
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 
+
+app.jinja_env.globals['include_file'] = lambda filename : Markup(app.jinja_loader.get_source(app.jinja_env, filename)[0])
+
+
+
 @app.route("/")
 def index():
     return render_template('index.html')
 
+@app.route("/#menu1")
+def index2():
+    return render_template('index.html#menu1')
+
+@app.route("/busy")
+def busy():
+    return render_template('busy.html')
+
+
 #execution of the train submition
 @app.route("/upload_train", methods=["POST"])
 def upload_train():
+
+    if os.path.exists('.lock'):   # tell the user to come back if it's locked
+        return render_template('busy.html')
+    else:
+        print("we are not busy. moving forward")
 
     target = os.path.join(APP_ROOT, './')
     print(target)
@@ -34,7 +56,7 @@ def upload_train():
         print("filename = ",filename,", destination = ",destination)
         file.save(destination)
 
-    cmd = 'unzip '+destination+' | tee log.txt '
+    cmd = 'touch .lock; unzip '+destination+' | tee log.txt '
     print('cmd = [',cmd,']')
     p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, shell=True)
     out,err = p.communicate()       # all the output and error will get sent to the browser
@@ -44,15 +66,18 @@ def upload_train():
 
 
 @app.route("/upload_preproc",methods=['GET','POST'])
-def upload_progress():
-    cmd = '~/panotti/preprocess_data.py -s | tee -a log.txt'
+def upload_preproc():
+    cmd = '../preprocess_data.py -s | tee -a log.txt'
     print('cmd = [',cmd,']')
     p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, shell=True)
     out,err = p.communicate()       # all the output and error will get sent to the browser
     print("out = ",str(out))
     print("err = ",str(err))
+    return render_template('train.html')
 
-    cmd = '~/panotti/train_network.py | tee -a log.txt'# ; ~/panotti/train_network.py | tee log.txt'
+@app.route("/train",methods=['GET','POST'])
+def train():
+    cmd = '../train_network.py | tee -a log.txt;  rm .lock'
     print('cmd = [',cmd,']')
     p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, shell=True)
     out,err = p.communicate()       # all the output and error will get sent to the browser
@@ -61,10 +86,11 @@ def upload_progress():
     return render_template('done_train.html')
 
 
-@app.route("/download_train", methods=["POST"])
+@app.route("/download_train", methods=["GET", "POST"])
 def download_train():
       try:
-          return send_file("weights.hdf5", attacthment_filename= "weights.hdf5")
+          #return send_file("weights.hdf5", attachment_filename= "weights.hdf5")
+          return send_from_directory(".", "weights.hdf5", as_attachment=True)
       except Exception as e:
           return str(e)
 
@@ -87,7 +113,7 @@ def upload_sort():
             print(" in sort: filename = ",filename,", destination = ",destination)
             file.save(destination)
 
-    cmd = 'cd Samples_sort; ~/panotti/predict_class.py -w ../weights.hdf5 -c ../Samples * | tee -a log.txt'
+    cmd = 'cd Samples_sort; ../predict_class.py -w ../weights.hdf5 -c ../Samples * | tee -a log.txt'
     print('cmd = [',cmd,']')
     p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, shell=True)
     out,err = p.communicate()       # all the output and error will get sent to the browser
@@ -106,9 +132,11 @@ def download_sort():
    print("out = ",str(out))
    print("err = ",str(err))
    try:
-       return send_file("Samples_sort/data.json")#, attacthment_filename= "downloads.zip")
+       return send_file("Samples_sort/data.json")
    except Exception as e:
        return str(e)
+
+
 
 
 if __name__ == "__main__":

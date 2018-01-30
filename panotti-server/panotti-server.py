@@ -109,7 +109,7 @@ def upload_sort():
             print(" in sort: filename = ",filename,", destination = ",destination)
             file.save(destination)
 
-    cmd = 'touch .lock; cd Samples_sort; rm -f data.json; ../../predict_class.py -d=4.0 -r=44100 -m -w ../weights.hdf5 -c ../Samples * | tee -a ../log.txt; cp data.json ..; cd ..; rm -rf .lock Samples_sort'
+    cmd = 'touch .lock; rm -f data.json; cd Samples_sort; ../../predict_class.py -d=4.0 -r=44100 -m -w ../weights.hdf5 -c ../Samples * | tee -a ../log.txt; cp data.json ..; cd ..; rm -rf .lock Samples_sort'
     print('cmd = [',cmd,']')
     p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, shell=True)
     out,err = p.communicate()       # all the output and error will get sent to the browser

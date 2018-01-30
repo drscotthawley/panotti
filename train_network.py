@@ -21,7 +21,7 @@ from os.path import isfile
 from timeit import default_timer as timer
 
 
-def train_network(weights_file="weights.hdf5", classpath="Preproc/Train/"):
+def train_network(weights_file="weights.hdf5", classpath="Preproc/Train/", epochs=50, batch_size=20):
     np.random.seed(1)
 
     # Get the data
@@ -33,8 +33,6 @@ def train_network(weights_file="weights.hdf5", classpath="Preproc/Train/"):
     # Train the model, meter with auto-split of 25% of training data
     #   (So, given original Train/Test split of 80/20%, we end up with 
     #    Train/Val/Test split of 60/20/20, as Andrew Ng recommends in his ML course )
-    batch_size = 20
-    epochs = 50
     checkpointer = ModelCheckpoint(filepath=weights_file, verbose=1, save_best_only=True)
     #earlystopping = EarlyStopping(patience=12)
     model.fit(X_train, Y_train, batch_size=batch_size, epochs=epochs,
@@ -55,6 +53,9 @@ if __name__ == '__main__':
         help='weights file in hdf5 format', default="weights.hdf5")
     parser.add_argument('-c', '--classpath', #type=argparse.string, 
         help='Train dataset directory with list of classes', default="Preproc/Train/")
+    parser.add_argument('--epochs', default=50, type=int, help="Number of iterations to train for")
+    parser.add_argument('--batch_size', default=20, type=int, help="Number of clips to send to GPU at once")
+
     args = parser.parse_args()
-    train_network(weights_file=args.weights, classpath=args.classpath)
+    train_network(weights_file=args.weights, classpath=args.classpath, epochs=args.epochs, batch_size=args.batch_size)
 

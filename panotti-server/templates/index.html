@@ -40,11 +40,11 @@
               <div id="home" class="tab-pane fade in active">
                 <header class="tab-content-header">
                   <h2>Training the Neural Net</h2>
-		<p>On your computer, make a folder called Samples and inside it create sub-folders with the names of each category you want to train on.  Place your audio files in these sub-folders accordingly.  Then zip the Samples folder in order to upload it via this form.  Then click Submit.<br>
+		<p>On your computer, make a folder called Samples and inside it create sub-folders with the names of each category you want to train on.  Place your audio files in these sub-folders accordingly.  Then zip the Samples folder and upload Samples.zip via this form.<br>
                 <form id="upload-form" action="{{ url_for('upload_train') }}" method="POST" enctype="multipart/form-data">
                   <div class="submission-form">
                     <span class="form-input fileUpload btn btn-primary btn-lg">
-                        <span>Upload Training Audio (Samples.zip)</span>
+                        <span>Upload Training Audio</span>
                         <input type="file" name="file" class="upload" multiple>
                     </span>
                     <span class="form-input btn btn-primary btn-lg fileUpload">
@@ -66,7 +66,6 @@
                            
                    </div>
                 </form>
-                   (You may click the "Browse..." button or drag the file onto the button)</p>
               </div>
 
               <div id="menu1" class="tab-pane fade">

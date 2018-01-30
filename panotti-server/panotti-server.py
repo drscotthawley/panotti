@@ -22,11 +22,10 @@ app.jinja_env.globals['include_file'] = lambda filename : Markup(app.jinja_loade
 
 @app.route("/")
 def index():
+    if os.path.exists('.lock'):             
+        return render_template('busy.html')   # tell user to come back if it's in use
     return render_template('index.html')
 
-@app.route("/#menu1")
-def index2():
-    return render_template('index.html#menu1')
 
 @app.route("/busy")
 def busy():
@@ -36,11 +35,8 @@ def busy():
 #execution of the train submition
 @app.route("/upload_train", methods=["POST"])
 def upload_train():
-
-    if os.path.exists('.lock'):   # tell the user to come back if it's locked
-        return render_template('busy.html')
-    else:
-        print("we are not busy. moving forward")
+    if os.path.exists('.lock'):             
+        return render_template('busy.html')   # tell user to come back if it's in use
 
     target = os.path.join(APP_ROOT, './')
     print(target)

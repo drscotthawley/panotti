@@ -21,7 +21,9 @@ def get_canonical_shape(signal):
         return signal.shape
 
 
-def find_max_shape(path, mono=False, sr=None):
+def find_max_shape(path, mono=False, sr=None, dur=None):
+    if (mono) and (sr is not None) and (dur is not None):   # special case for speedy testing
+        return [1, int(sr*dur)]
     shapes = []
     for dirname, dirnames, filenames in os.walk(path):
         for filename in filenames:
@@ -56,8 +58,12 @@ def convert_one_file(file_index):
         raise e
 
     shape = get_canonical_shape(signal)
+    signal = np.reshape(signal,shape)
     padded_signal = np.zeros(max_shape)
-    padded_signal[:shape[0], :shape[1]] = signal
+    use_shape = max_shape[:]
+    use_shape[0] = min( shape[0], max_shape[0] )
+    use_shape[1] = min( shape[1], max_shape[1] )
+    padded_signal[:use_shape[0], :use_shape[1]] = signal[:use_shape[0], :use_shape[1]]
 
     layers = make_layered_melgram(padded_signal, sr)
 
@@ -74,7 +80,7 @@ def convert_one_file(file_index):
 
 
 
-def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0.8, resample=None, already_split=False, sequential=False, mono=False):
+def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0.8, resample=None, already_split=False, sequential=False, mono=False, dur=None):
     global global_args
 
     if (resample is not None):
@@ -94,8 +100,8 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
     else:
         print(" Shuffling ordering")
 
-
-    max_shape = find_max_shape(inpath, mono, resample)
+    print(" Finding max shape...")
+    max_shape = find_max_shape(inpath, mono=mono, sr=resample, dur=dur)
     print(''' Padding all files with silence to fit shape:
               Channels : {}
               Samples  : {}
@@ -186,6 +192,8 @@ if __name__ == '__main__':
     parser.add_argument("-a", "--already", help="data is already split into Test & Train (default is to add 80-20 split",action="store_true")
     parser.add_argument("-s", "--sequential", help="don't randomly shuffle data for train/test split",action="store_true")
     parser.add_argument("-m", "--mono", help="convert input audio to mono",action="store_true")
+    parser.add_argument("-r", "--resample", type=int, default=44100, help="convert input audio to mono")
+    parser.add_argument('-d', "--dur",  type=float, default=None,   help='Max duration (in seconds) of each clip')
 
     args = parser.parse_args()
-    preprocess_dataset(resample=44100, already_split=args.already, sequential=args.sequential, mono=args.mono)
+    preprocess_dataset(resample=args.resample, already_split=args.already, sequential=args.sequential, mono=args.mono, dur=args.dur)

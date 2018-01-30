@@ -63,7 +63,7 @@ def upload_train():
 
 @app.route("/upload_preproc",methods=['GET','POST'])
 def upload_preproc():
-    cmd = 'touch .lock; rm -f Samples.zip;  ../preprocess_data.py -s | tee -a log.txt'
+    cmd = 'touch .lock; rm -f Samples.zip;  ../preprocess_data.py -s -m --dur=4.0 -r=44100 | tee -a log.txt'
     print('cmd = [',cmd,']')
     p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, shell=True)
     out,err = p.communicate()       # all the output and error will get sent to the browser
@@ -109,7 +109,7 @@ def upload_sort():
             print(" in sort: filename = ",filename,", destination = ",destination)
             file.save(destination)
 
-    cmd = 'cd Samples_sort; ../predict_class.py -w ../weights.hdf5 -c ../Samples * | tee -a log.txt'
+    cmd = 'cd Samples_sort; ../../predict_class.py -d=4.0 -r=44100 -m -w ../weights.hdf5 -c ../Samples * | tee -a ../log.txt'
     print('cmd = [',cmd,']')
     p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, shell=True)
     out,err = p.communicate()       # all the output and error will get sent to the browser
@@ -121,14 +121,14 @@ def upload_sort():
 
 @app.route("/download_sort", methods=["GET","PUT"])
 def download_sort():
-   cmd= "echo hello;  pwd;  zip -r downloads.zip data.json"# file.exe"
-   print('cmd = [',cmd,']')
-   p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, shell=True)
-   out,err = p.communicate()       # all the output and error will get sent to the browser
-   print("out = ",str(out))
-   print("err = ",str(err))
+   #cmd= "echo hello;  pwd;  zip -r downloads.zip data.json"# file.exe"
+   #print('cmd = [',cmd,']')
+   #p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, shell=True)
+   #out,err = p.communicate()       # all the output and error will get sent to the browser
+   #print("out = ",str(out))
+   #print("err = ",str(err))
    try:
-       return send_file("Samples_sort/data.json")
+       return send_from_directory("Samples_sort", "data.json", as_attachment=True)
    except Exception as e:
        return str(e)
 

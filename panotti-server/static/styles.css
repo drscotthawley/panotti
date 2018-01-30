@@ -1,8 +1,3 @@
-/*.description {
-    border-radius: 5px;
-    padding: 10px 10px
-}*/
-
 .fileUpload {
     position: relative;
     overflow: hidden;
@@ -41,6 +36,7 @@
     color:#322;
     font-weight: bold;
 }
+
 [tooltip]:before{
     content:attr(tooltip);
     border-radius: 5px;
@@ -59,9 +55,11 @@
     z-index: 98;
     width: 350px;
 }
+
 [tooltip]:hover:before{
     opacity:1;
 }
+
 [tooltip]:hover:after {
     background:#fff;
     border: solid;
@@ -73,3 +71,4 @@
     position: absolute;
     z-index: 99;
 }
+

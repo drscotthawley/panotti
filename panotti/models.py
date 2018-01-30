@@ -84,7 +84,7 @@ def MyCNN_Keras2(X, nb_classes, nb_layers=4):
 
     for layer in range(nb_layers-1):   # add more layers than just the first
         model.add(Conv2D(nb_filters, kernel_size))
-        #model.add(BatchNormalization(axis=1, mode=2)) # ELU authors reccommend no BatchNorm
+        #model.add(BatchNormalization(axis=1))  # ELU authors reccommend no BatchNorm
         model.add(ELU(alpha=1.0))
         model.add(MaxPooling2D(pool_size=pool_size))
         model.add(Dropout(cl_dropout))

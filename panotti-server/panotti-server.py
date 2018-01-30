@@ -109,7 +109,7 @@ def upload_sort():
             print(" in sort: filename = ",filename,", destination = ",destination)
             file.save(destination)
 
-    cmd = 'cd Samples_sort; ../../predict_class.py -d=4.0 -r=44100 -m -w ../weights.hdf5 -c ../Samples * | tee -a ../log.txt'
+    cmd = 'touch .lock; cd Samples_sort; rm -f data.json; ../../predict_class.py -d=4.0 -r=44100 -m -w ../weights.hdf5 -c ../Samples * | tee -a ../log.txt; cp data.json ..; cd ..; rm -rf .lock Samples_sort'
     print('cmd = [',cmd,']')
     p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, shell=True)
     out,err = p.communicate()       # all the output and error will get sent to the browser
@@ -128,7 +128,7 @@ def download_sort():
    #print("out = ",str(out))
    #print("err = ",str(err))
    try:
-       return send_from_directory("Samples_sort", "data.json", as_attachment=True)
+       return send_from_directory(".", "data.json", as_attachment=True)
    except Exception as e:
        return str(e)
 

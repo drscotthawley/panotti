@@ -18,12 +18,14 @@
       <div class="jumbotron">
         <h1 class="display-4">Panotti Server</h1>
         <p class="lead">Organize your audio library with the help of neural nets.</p>
-        <p style="font-size:100%;">Panotti Server is a cloud-based service that applies machine learning to the task of audio 'tagging'.
-                    This task is computation-intensive and beyond the capabilities of typical laptops, which is why we use GPU (graphics processing units) hosted in the cloud!</smaller><p>
-                  <p style="font-size:100%">Panotti Server can enable composers and producers to re-label their audio sample libraries
-                    according to genre, instrument, or even personal preferences.</p>
-                </header>
       </div>
+      <div class="description">
+        <p>Panotti Server is a cloud-based service that applies machine learning to the task of audio 'tagging'.
+                    This task is computation-intensive and beyond the capabilities of typical laptops, which is why we use GPU (graphics processing units) hosted in the cloud!</smaller><p>
+         <p style="font-size:100%">Panotti Server can enable composers and producers to re-label their audio sample libraries
+                    according to genre, instrument, or even personal preferences.</p>
+      </div>
+               
 
       <div class="container">
         <div class="row">
@@ -50,8 +52,20 @@
                       <input type="submit" value= "Submit" class="upload">
                     </span>
                   </div>
+                   <input  id="advanced_show" class="advanced_show" type="checkbox" />
+                   <label for="advanced_show"><u>Show Advanced Settings</u></label>
+                   <div class="advanced_content">
+                           <i><b>TODO:</b> none of these work yet </i><br>
+                           <span tooltip="How the 'synapses' of the neural network are initialized">Starting Weights:</span>  (Three choices: Default Pre-trained, Random, or Upload a weights file)<br>
+                           <span tooltip="Use the first __ seconds of each audio clip. Zero-pad shorter clips">Clip Length:</span> 
+                                  <input type=number" name="dur" step="1" pattern="\d+" size="2" value="3"/> s <br>
+                           <span tooltip="Number of machine learning iterations to run. Can re-run again for more training">Epochs:</span> 
+                                  <input type=number" name="epochs" step="1" pattern="\d+" size="2" value="50"/> <br>
+                           <span tooltip="For rapid Transfer Learning. Freezes first __ fraction of model layers, i.e. weights are not trained. 0.0 = train all layers (slow), 0.8 is fast but may limit accuracy">Freeze fraction:</span>
+                                  <input type=number" name="epochs" size="2" step="0.01" value="0.0"/> <br>
+                           
+                   </div>
                 </form>
-                   (You may click the "Browse..." button or drag the file onto the button)</p>
               </div>
 
               <div id="menu1" class="tab-pane fade">
@@ -90,6 +104,7 @@
       </div>
 
     </div>
+
 
 
     <!-- Optional JavaScript -->

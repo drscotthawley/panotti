@@ -24,7 +24,7 @@ I'm not shipping this with any audio but you can generate some for the 'fake bin
     cd binaural
     ../../train_network.py
 
-*Coming Soon: Demo via new Panotti Server!  Watch this space.*
+*Check out the new user-friendly server mode, Sorting H.A.T., in folder sorting-hat/!*
 
 ## Quick Start
 * Make a folder called `Samples/` and inside it create sub-folders with the names of each category you want to train on. Place your audio files in these sub-folders accordingly. 

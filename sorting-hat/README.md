@@ -1,4 +1,4 @@
-# Sorting H.A.T 
+# Sorting H.A.T.
 
 *A product of Team 15 at the HackMT Hackathon: Scott Hawley, Braden Carei, Daniel Ellis, Will Haase, Braiden King, Tyler Thomas. January 26-28, 2018:*  
 

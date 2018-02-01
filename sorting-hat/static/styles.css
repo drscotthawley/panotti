@@ -50,16 +50,13 @@
     font-weight: bold;
 }
 
-[tooltip]:before{
+[tooltip]:before{   /* make it present but transparent */
     content:attr(tooltip);
     border-radius: 5px;
     background:#666;
     opacity:0.0;
     color:white;
     font-size:smaller;
-    /*-webkit-transition:opacity 1s ease;
-    -o-transition:opacity 1s ease;
-    transition:opacity 1s ease;*/
     pointer-events:none;
     top:110%;
     left: 20%;
@@ -69,11 +66,11 @@
     width: 350px;
 }
 
-[tooltip]:hover:before{
+[tooltip]:hover:before{   /* on hover make it visibile */
     opacity:1;
 }
 
-[tooltip]:hover:after {
+[tooltip]:hover:after {   /* the triagular arrow part */
     background:#fff;
     border: solid;
     border-color: #666 transparent;
@@ -83,4 +80,36 @@
     left: 40%;
     position: absolute;
     z-index: 99;
+}
+
+.img-tooltip{
+  font-weight: bold;
+  border-bottom:1px dashed #ccc;
+}
+.ideamg-tooltip:before {
+  background:#666;
+  opacity:0.0;
+  color:white;
+  font-size:smaller;
+  pointer-events:none;
+  top:110%;
+  left: 20%;
+  padding: 5px 15px;
+  position: absolute;
+  z-index: 98;
+  width: 350px;
+}
+.img-tooltip.:hover:before {
+   opacity: 1;
+ }
+.img-tooltip:hover {
+    position: relative;
+}
+.img-tooltip:hover:after {
+  content: url("SampleSamples.png"); /* no need for qoutes */
+  display: block;
+  position:absolute;
+  left: 123px; /* change this value to one that suits you */
+  top: 56px; /* change this value to one that suits you */
+
 }

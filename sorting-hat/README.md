@@ -18,7 +18,7 @@ according to genre, instrument, or even personal preferences.
 
     $ python sorting-hat.py
 
-This starts an HTTP host on port 8000.  Once it's running, point your web browser to the URL of the machine running panotti-server,
+This starts an HTTP host on port 8000.  Once it's running, point your web browser to the URL of the machine running sorting-hat.py,
 (e.g. http://127.0.0.1:8000 for localhost).
 
 ## Screenshot:

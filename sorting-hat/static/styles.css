@@ -1,3 +1,16 @@
+.jumbotron{
+    position: relative;
+    padding-top:1px !important;
+    padding-bottom:10px !important;
+    /*padding:0 !important;*/
+    margin-top:0px !important;
+    background: #eee;
+    margin-top: 23px;
+    margin-bottom: 0 !important;
+}
+.sublead {
+  font-size: 20px;
+}
 .fileUpload {
     position: relative;
     overflow: hidden;
@@ -71,4 +84,3 @@
     position: absolute;
     z-index: 99;
 }
-

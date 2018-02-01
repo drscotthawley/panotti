@@ -38,7 +38,10 @@
                   <div id="home" class="tab-pane fade in active">
                     <header class="tab-content-header">
                       <h2>Training the Neural Net</h2>
-    		<p>On your computer, make a folder called Samples and inside it create sub-folders with the names of each category you want to train on.  Place your audio files in these sub-folders accordingly.  Then zip the Samples folder and upload Samples.zip via this form.<br>
+    		<p>On your computer, make a folder called
+           <span class="img-tooltip">"Samples"</span>
+           and inside it create sub-folders with the names of each category you want to train on.  Place your audio files in these sub-folders accordingly.
+           Then zip the Samples folder and upload <b>Samples.zip</b> via this form.<br>
                     <form id="upload-form" action="{{ url_for('upload_train') }}" method="POST" enctype="multipart/form-data">
                       <div class="submission-form">
                         <span class="form-input fileUpload btn btn-primary btn-lg">
@@ -51,7 +54,7 @@
                         </span>
                       </div>
                        <input  id="advanced_show" class="advanced_show" type="checkbox" />
-                       <label for="advanced_show"><u>Show Advanced Settings</u></label>
+                       <label for="advanced_show"><u>Advanced Settings</u></label>
                        <div class="advanced_content">
                                <i><b>TODO:</b> none of these work yet </i><br>
                                <span tooltip="How the 'synapses' of the neural network are initialized">Starting Weights:</span>  (Three choices: Default Pre-trained, Random, or Upload a weights file)<br>

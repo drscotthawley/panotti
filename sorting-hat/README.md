@@ -11,7 +11,7 @@ This task is computation-intensive and beyond the capabilities of typical laptop
 Sorting H.A.T. can enable composers and producers to re-label their audio sample libraries
 according to genre, instrument, or even personal preferences.
 
-It is essentially a user-friendly interface to Scott Hawley's [Panotti](http://github.com/drscotthawley/panotti) audio classifier.
+It is essentially a user-friendly interface to the [Panotti](http://github.com/drscotthawley/panotti) audio classifier code.
 
 ## Requirements:
 - panotti (requires keras, tensorflow,...)

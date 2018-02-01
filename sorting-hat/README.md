@@ -1,7 +1,7 @@
 # Sorting H.A.T.*<img src="static/sorting-hat-logo.png" height=100em>
+### *Organize your audio library with the help of neural nets.*
 
-##### Organize your audio library with the help of neural nets.
-*Hosted Audio Tagger
+###### *Hosted Audio Tagger
 
 ---
 

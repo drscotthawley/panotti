@@ -10,56 +10,18 @@ MyCNN:  This is kind of a mixture of Keun Woo Choi's code https://github.com/keu
    and the MNIST classifier at https://github.com/fchollet/keras/blob/master/examples/mnist_cnn.py
 '''
 import keras
+import tensorflow as tf
 from keras.models import Sequential, Model, load_model
 from keras.layers import Input, Dense, TimeDistributed, LSTM, Dropout, Activation
 from keras.layers import Convolution2D, MaxPooling2D, Flatten, Conv2D
 from keras.layers.normalization import BatchNormalization
 from keras.layers.advanced_activations import ELU
+from keras.optimizers import SGD, Adam
+
 from os.path import isfile
-
-from distutils.version import LooseVersion
-
-
-'''
-MyCNN:  This is kind of a mixture of a dumbed-down versoin of Keun Woo Choi's
-    compact CNN model  (https://github.com/keunwoochoi/music-auto_tagging-keras)
-    and the Keras MNIST classifier example
-            (https://github.com/fchollet/keras/blob/master/examples/mnist_cnn.py)
-
-    Uses same kernel, filters and pool size for everything
-'''
-def MyCNN(X, nb_classes, nb_layers=4):
-    nb_filters = 32  # number of convolutional filters = "feature maps"
-    kernel_size = (3, 3)  # convolution kernel size
-    pool_size = (2, 2)  # size of pooling area for max pooling
-    cl_dropout = 0.5    # conv. layer dropout
-    dl_dropout = 0.6    # dense layer dropout
-
-    channels = X.shape[1]   # channels = 1 for mono, 2 for stereo
-
-    print(" MyCNN: X.shape = ",X.shape,", channels = ",channels)
-    input_shape = (channels, X.shape[2], X.shape[3])
-    model = Sequential()
-    model.add(Convolution2D(nb_filters, kernel_size[0], kernel_size[1],
-                        border_mode='valid', input_shape=input_shape))
-    model.add(BatchNormalization(axis=1, mode=2))
-    model.add(Activation('relu'))
-
-    for layer in range(nb_layers-1):   # add more layers than just the first
-        model.add(Convolution2D(nb_filters, kernel_size[0], kernel_size[1]))
-        #model.add(BatchNormalization(axis=1, mode=2)) # ELU authors reccommend no BatchNorm
-        model.add(ELU(alpha=1.0))
-        model.add(MaxPooling2D(pool_size=pool_size))
-        model.add(Dropout(cl_dropout))
-
-    model.add(Flatten())
-    model.add(Dense(128))
-    model.add(Activation('relu'))
-    model.add(Dropout(dl_dropout))
-    model.add(Dense(nb_classes))
-    model.add(Activation("softmax"))
-    model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
-    return model
+from panotti.multi_gpu import *
+from tensorflow.python.client import device_lib
+from panotti.multi_gpu import make_parallel, get_available_gpus
 
 
 def MyCNN_Keras2(X, nb_classes, nb_layers=4):
@@ -77,56 +39,65 @@ def MyCNN_Keras2(X, nb_classes, nb_layers=4):
     print(" MyCNN_Keras2: X.shape = ",X.shape,", channels = ",channels)
     input_shape = (channels, X.shape[2], X.shape[3])
     model = Sequential()
-    #model.add(Conv2D(nb_filters, kernel_size, border_mode='valid', input_shape=input_shape))
-    model.add(Conv2D(nb_filters, kernel_size, border_mode='valid', input_shape=input_shape))
+    model.add(Conv2D(nb_filters, kernel_size, padding='valid', input_shape=input_shape))
     model.add(BatchNormalization(axis=1))
-    model.add(Activation('relu'))
+    model.add(Activation('relu'))        # Leave this relu & BN here.  ELU is not good here (my experience)
 
     for layer in range(nb_layers-1):   # add more layers than just the first
         model.add(Conv2D(nb_filters, kernel_size))
-        #model.add(BatchNormalization(axis=1))  # ELU authors reccommend no BatchNorm
+        #model.add(BatchNormalization(axis=1))  # ELU authors reccommend no BatchNorm. I confirm
         model.add(ELU(alpha=1.0))
         model.add(MaxPooling2D(pool_size=pool_size))
         model.add(Dropout(cl_dropout))
 
     model.add(Flatten())
-    model.add(Dense(128))
-    model.add(Activation('relu'))
+    model.add(Dense(128))            # 128 is 'arbitrary' for now
+    #model.add(Activation('relu'))   # relu (no BN) works fine here, however...
+    model.add(ELU(alpha=1.0))        # ELU does a little better than relu here
     model.add(Dropout(dl_dropout))
     model.add(Dense(nb_classes))
     model.add(Activation("softmax"))
-    model.compile(loss='categorical_crossentropy', optimizer='adadelta', metrics=['accuracy'])
     return model
 
 
 
-
 def make_model(X, class_names, nb_layers=4, try_checkpoint=True,
-    no_cp_fatal=False, weights_file='weights.hdf5'):
+    weights_file='weights.hdf5', quiet=False):
+    ''' In the following, the reason we hang on to & return serial_model,
+         is because Keras can't save parallel models, but according to fchollet
+         the serial & parallel versions will always share the same weights
+         (Strange but true!)
+    '''
 
-    model = None
-    from_scratch = True
+    gpu_count = get_available_gpus()
+
+    if gpu_count <= 1:
+        serial_model = MyCNN_Keras2(X, nb_classes=len(class_names), nb_layers=nb_layers)
+    else:
+        with tf.device("/cpu:0"):
+            serial_model = MyCNN_Keras2(X, nb_classes=len(class_names), nb_layers=nb_layers)
+
     # Initialize weights using checkpoint if it exists.
     if (try_checkpoint):
         print("Looking for previous weights...")
         if ( isfile(weights_file) ):
             print ('Weights file detected. Loading from ',weights_file)
-            model = load_model(weights_file)
-            from_scratch = False
+            loaded_model = load_model(weights_file)   # strip any previous parallel part, to be added back in later
+            serial_model.set_weights( loaded_model.get_weights() )   # assign weights based on checkpoint
         else:
-            if (no_cp_fatal):
-                raise Exception("No weights file detected; can't do anything.  Aborting.")
-            else:
-                print('No weights file detected, so starting from scratch.')
+            print('No weights file detected, so starting from scratch.')
 
-    if from_scratch:
-        if (LooseVersion(keras.__version__) < LooseVersion("2")):
-            print("Making Keras 1 version of model")
-            model = MyCNN(X, nb_classes=len(class_names), nb_layers=nb_layers)
-        else:
-            print("Making Keras 2 version of model")
-            model = MyCNN_Keras2(X, nb_classes=len(class_names), nb_layers=nb_layers)
+    if (gpu_count >= 2):
+        print(" Parallel run on",gpu_count,"GPUs")
+        model = make_parallel(serial_model, gpu_count=gpu_count)
+    else:
+        model = serial_model
 
-    model.summary()
+    opt = 'adadelta' # Adam(lr = 0.00001)  #
 
-    return model
+    model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
+
+    if (False == quiet):
+        serial_model.summary()  # print out the model layers
+
+    return model, serial_model

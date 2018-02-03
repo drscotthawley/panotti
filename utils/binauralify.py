@@ -5,13 +5,13 @@ Send a mono file to a bunch of stereo files of binaural audio, for various sourc
 
 Author: Scott Hawley, modified from Adam Bard's code at http://web.uvic.ca/~adambard/ASP/project/
 
-In the code's current state, it only varies in a horizontal plane ("azimuth"), 
-but you can easily modify it to go up/down ("elevation") as well.   
+In the code's current state, it only varies in a horizontal plane ("azimuth"),
+but you can easily modify it to go up/down ("elevation") as well.
 
 For my ML runs, I'm trying n_az = 12, i.e. every 30 degrees.
 
 Requirements:
-    HRTF data: It will automatically try to download the HRTF measurements from 
+    HRTF data: It will automatically try to download the HRTF measurements from
         http://sound.media.mit.edu/resources/KEMAR/compact.tar.Z
         and install them in the current directory
         If this fails, you can just install them yourself
@@ -22,10 +22,11 @@ import numpy as np
 from scipy import *
 import librosa
 import os, sys
+from multiprocessing import Pool
 
 
 # TODO: this never checks in case one of the operations fails
-def download_if_missing(dirname="compact", filename="compact.tar.Z", 
+def download_if_missing(dirname="compact", filename="compact.tar.Z",
     url="http://sound.media.mit.edu/resources/KEMAR/compact.tar.Z",tar=True):
 
     if not os.path.isdir(dirname):
@@ -67,7 +68,7 @@ def readHRTF_file(name):   # from https://github.com/uncopenweb/3DSound
 def setangles(elev, azimuth):
     elev = int(elev)
     azimuth = int(azimuth)
-    
+
     #bring to multiple of ten
     if elev != 0:
         while elev%10 > 0:
@@ -125,7 +126,7 @@ def setangles(elev, azimuth):
 
     if int(azimuth) < 100:
         azimuth = "0" + str(int(azimuth))
-        
+
     if int(azimuth) < 10:
         azimuth = "00"+ str(int(azimuth))
 
@@ -134,7 +135,7 @@ def setangles(elev, azimuth):
 
 
 def read(elev, azimuth, N=128):
-    """ Accepts elev and azimuth in degrees, and returns closest impulse response and 
+    """ Accepts elev and azimuth in degrees, and returns closest impulse response and
     transfer function to that combination from compact KEMAR HRTF measurements"""
 
     elev, azimuth, flip = setangles(elev, azimuth)
@@ -179,7 +180,7 @@ def path(t_sig, infile, sr, start, end, duration=0, window_size=1024, fs=44100):
 
     if duration == 0:
         duration = len(t_sig)/fs
-    
+
     azimuth = start[1]
     azimuth_end = end[1]
     N_steps = int(len(t_sig) * 2 / window_size)
@@ -201,7 +202,7 @@ def path(t_sig, infile, sr, start, end, duration=0, window_size=1024, fs=44100):
 
         elev = elev + elev_delta
         azimuth = azimuth + azimuth_delta
-        
+
         i = i + 0.5
 
     return output_l, output_r
@@ -212,7 +213,7 @@ def path(t_sig, infile, sr, start, end, duration=0, window_size=1024, fs=44100):
 def project_multi(mono_sig, infile, sr, start, end, steps, quiet=False):
     elev_bgn = start[0]
     az_bgn = start[1]
-    elev_end = end[0]   
+    elev_end = end[0]
     az_end = end[1]
     steps_elev = steps[0]
     steps_az = steps[1]
@@ -235,7 +236,7 @@ def project_multi(mono_sig, infile, sr, start, end, steps, quiet=False):
             # save to file
             classname = "class"+str(count).zfill(2)+"-"+"a"+str(az)#+"e"+str(elev)+ # can add elevation if you want
             if not os.path.exists(outpath+classname):
-                    os.mkdir( outpath+classname)
+                os.mkdir( outpath+classname)
             filename_no_ext = os.path.splitext(infile)[0]
             ext = os.path.splitext(infile)[1]
             outfile = classname+'/'+filename_no_ext+'_'+classname+ext
@@ -244,12 +245,34 @@ def project_multi(mono_sig, infile, sr, start, end, steps, quiet=False):
             librosa.output.write_wav(outfile,stereo_sig,sr)
     if not quiet:
         print("")
-    return 
+    return
 
+global_args = []
+def binauralify_one_file(file_index):
+    global global_args
+    (file_list, n_az, quiet) = global_args
 
+    infile = file_list[file_index]
+    if os.path.isfile(infile):
+        print("   Binauralifying file",infile,"...")
+        mono, sr = librosa.load(infile, sr=None)   # librosa naturally makes mono from stereo btw
+        project_multi(mono, infile, sr, (0,-180), (0, 180), (1,n_az), quiet=quiet)
+    else:
+        print("   *** File",infile,"does not exist.  Skipping.")
+    return
 
 def main(args):
+    global global_args
+
     download_if_missing()                # make sure we've got the hrtf data we need
+    cpu_count = os.cpu_count()
+    print("",cpu_count,"CPUs detected: Parallel execution across",cpu_count,"CPUs")
+    file_indices = tuple( range(len(args.file)) )
+
+    global_args = [args.file, args.n_az, args.quiet]
+    pool = Pool(cpu_count)
+    pool.map(binauralify_one_file, file_indices)
+    '''
     for infile in args.file:
         if os.path.isfile(infile):
             print("   Binauralifying file",infile,"...")
@@ -257,7 +280,7 @@ def main(args):
             project_multi(mono, infile, sr, (0,-180), (0, 180), (1,args.n_az), quiet=args.quiet)
         else:
             print("   *** File",infile,"does not exist.  Skipping.")
-
+    '''
 
 
 if __name__ == "__main__":
@@ -267,6 +290,6 @@ if __name__ == "__main__":
     parser.add_argument("-q", "--quiet", help="quiet mode; reduce output",
                     action="store_true")
     parser.add_argument("n_az", help="number of discrete poitions of azimuth",type=int)
-    parser.add_argument('file', help="mono wav file(s) to binauralify", nargs='+')   
+    parser.add_argument('file', help="mono wav file(s) to binauralify", nargs='+')
     args = parser.parse_args()
     main(args)

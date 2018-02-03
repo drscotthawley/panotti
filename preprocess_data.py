@@ -11,6 +11,7 @@ import librosa.display
 from audioread import NoBackendError
 import os
 from multiprocessing import Pool
+from PIL import Image
 
 global_args = []    # after several hours of reading StackExchange on passing args w/ multiprocessing, I'm giving up and using globals
 
@@ -41,7 +42,8 @@ def find_max_shape(path, mono=False, sr=None, dur=None, clean=False):
 
 
 def convert_one_file(file_index):
-    (printevery, class_index, class_files, nb_classes, classname, n_load, dirname, resample, mono, already_split, n_train, outpath, subdir, max_shape, clean) = global_args
+    (printevery, class_index, class_files, nb_classes, classname, n_load, dirname, resample, mono,
+        already_split, n_train, outpath, subdir, max_shape, clean, out_format) = global_args
     infilename = class_files[file_index]
     audio_path = dirname + '/' + infilename
     if (0 == file_index % printevery) or (file_index+1 == len(class_files)):
@@ -77,12 +79,24 @@ def convert_one_file(file_index):
     else:
         outsub = subdir
 
-    outfile = outpath + outsub + classname + '/' + infilename+'.npy'
-    np.save(outfile,layers)
+    outfile = outpath + outsub + classname + '/' + infilename+'.'+out_format
+    if ('npy' == out_format):
+        np.save(outfile,layers)
+    elif ('jpeg' == out_format) or ('png' == out_format):
+        arr = np.reshape(layers, (layers.shape[2],layers.shape[3]))
+        if (mono):
+            im = Image.fromarray(arr).convert('L')    # greyscale image
+        else:
+            im = Image.fromarray(arr).convert('RGB')  # Note this limits # audio channels to no more than 3!
+        im.save(outfile)
+    else:
+        print("Error: unrecognized output format '",out_format,"'",sep="")
+        assert(False)
+    return
 
 
-
-def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0.8, resample=None, already_split=False, sequential=False, mono=False, dur=None, clean=False):
+def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0.8, resample=None, already_split=False,
+    sequential=False, mono=False, dur=None, clean=False, out_format='npy'):
     global global_args
 
     if (resample is not None):
@@ -147,7 +161,8 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
 
             printevery = 20
 
-            global_args = (printevery, class_index, class_files, nb_classes, classname, n_load, dirname, resample, mono, already_split, n_train, outpath, subdir, max_shape, clean)
+            global_args = (printevery, class_index, class_files, nb_classes, classname, n_load, dirname,
+                resample, mono, already_split, n_train, outpath, subdir, max_shape, clean, out_format)
 
             parallel = True
             file_indices = tuple( range(len(class_files)) )
@@ -171,6 +186,8 @@ if __name__ == '__main__':
     parser.add_argument("-r", "--resample", type=int, default=44100, help="convert input audio to mono")
     parser.add_argument('-d', "--dur",  type=float, default=None,   help='Max duration (in seconds) of each clip')
     parser.add_argument("--clean", help="Assume 'clean data'; Do not check to find max shape (faster)", action='store_true')
+    parser.add_argument('-f','--format', help="format of output file (npy, jpeg, png, etc). Default = .npy", type=str, default='npy')
 
     args = parser.parse_args()
-    preprocess_dataset(resample=args.resample, already_split=args.already, sequential=args.sequential, mono=args.mono, dur=args.dur, clean=args.clean)
+    preprocess_dataset(resample=args.resample, already_split=args.already, sequential=args.sequential, mono=args.mono,
+        dur=args.dur, clean=args.clean, out_format=args.format)

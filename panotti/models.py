@@ -62,7 +62,7 @@ def MyCNN_Keras2(X, nb_classes, nb_layers=4):
 
 
 def make_model(X, class_names, nb_layers=4, try_checkpoint=True,
-    weights_file='weights.hdf5', quiet=False):
+    weights_file='weights.hdf5', quiet=False, missing_weights_fatal=False):
     ''' In the following, the reason we hang on to & return serial_model,
          is because Keras can't save parallel models, but according to fchollet
          the serial & parallel versions will always share the same weights
@@ -85,7 +85,11 @@ def make_model(X, class_names, nb_layers=4, try_checkpoint=True,
             loaded_model = load_model(weights_file)   # strip any previous parallel part, to be added back in later
             serial_model.set_weights( loaded_model.get_weights() )   # assign weights based on checkpoint
         else:
-            print('No weights file detected, so starting from scratch.')
+            if (missing_weights_fatal):
+                print("Need weights file to continue.  Aborting")
+                assert(not missing_weights_fatal)
+            else:
+                print('No weights file detected, so starting from scratch.')
 
     if (gpu_count >= 2):
         print(" Parallel run on",gpu_count,"GPUs")
@@ -94,10 +98,13 @@ def make_model(X, class_names, nb_layers=4, try_checkpoint=True,
         model = serial_model
 
     opt = 'adadelta' # Adam(lr = 0.00001)  #
+    loss = 'categorical_crossentropy'
+    metrics = ['accuracy']
+    model.compile(loss=loss, optimizer=opt, metrics=metrics)
+    serial_model.compile(loss=loss, optimizer=opt, metrics=metrics)
 
-    model.compile(loss='categorical_crossentropy', optimizer=opt, metrics=['accuracy'])
-
-    if (False == quiet):
+    if (not quiet):
+        print("Summary of serial model (duplicated across",gpu_count,"GPUs):")
         serial_model.summary()  # print out the model layers
 
     return model, serial_model

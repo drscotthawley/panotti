@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 
 '''
 Classify sounds using database - evaluation code
@@ -54,29 +54,22 @@ def count_mistakes(y_scores,Y_test,paths_test,class_names):
     return
 
 
-def eval_network(weights_file="weights.hdf5", classpath="Preproc/Test/"):
+def eval_network(weights_file="weights.hdf5", classpath="Preproc/Test/", batch_size=40):
     np.random.seed(1)
 
-    # Load the model
-    model = load_model(weights_file)
-    if model is None:
-        print("No weights file found.  Aborting")
-        exit(1)
-    model.summary()
-
     # get the data
-    X_test, Y_test, paths_test, class_names = build_dataset(path=classpath)
+    X_test, Y_test, paths_test, class_names = build_dataset(path=classpath, batch_size=batch_size)
     print("class names = ",class_names)
     n_classes = len(class_names)
 
-    #model = keras.models.load_model(weights_file)
+    # Load the model
+    model, serial_model = make_model(X_test, class_names, weights_file=weights_file, missing_weights_fatal=True)
+    model.summary()
 
-    batch_size = 100
     num_pred = X_test.shape[0]
 
-
-    print("Running predict_proba...")
-    y_scores = model.predict_proba(X_test[0:num_pred,:,:,:],batch_size=batch_size)
+    print("Running predict...")
+    y_scores = model.predict(X_test[0:num_pred,:,:,:],batch_size=batch_size)
 
 
     print("Counting mistakes ")
@@ -122,7 +115,7 @@ def eval_network(weights_file="weights.hdf5", classpath="Preproc/Test/"):
     print(model.metrics_names)
     print(scores)
 
-    print("\nFinished.  Close plot window to return to shell.")
+    print("\nFinished.")
     #plt.show()
     return
 
@@ -134,5 +127,7 @@ if __name__ == '__main__':
         help='weights file in hdf5 format', default="weights.hdf5")
     parser.add_argument('-c', '--classpath', #type=argparse.string,
         help='test dataset directory with list of classes', default="Preproc/Test/")
+    parser.add_argument('--batch_size', default=40, type=int, help="Number of clips to send to GPU at once")
+
     args = parser.parse_args()
-    eval_network(weights_file=args.weights, classpath=args.classpath)
+    eval_network(weights_file=args.weights, classpath=args.classpath, batch_size=args.batch_size)

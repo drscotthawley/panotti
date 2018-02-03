@@ -22,7 +22,7 @@ app.jinja_env.globals['include_file'] = lambda filename : Markup(app.jinja_loade
 
 @app.route("/")
 def index():
-    if os.path.exists('.lock'):             
+    if os.path.exists('.lock'):
         return render_template('busy.html')   # tell user to come back if it's in use
     return render_template('index.html')
 
@@ -35,7 +35,7 @@ def busy():
 # User uploads data for training
 @app.route("/upload_train", methods=["POST"])
 def upload_train():
-    if os.path.exists('.lock'):             
+    if os.path.exists('.lock'):
         return render_template('busy.html')   # tell user to come back if it's in use
 
     target = os.path.join(APP_ROOT, './')
@@ -73,7 +73,7 @@ def upload_preproc():
 
 @app.route("/train",methods=['GET','POST'])
 def train():
-    cmd = 'touch .lock; ../train_network.py --epochs=10 | tee -a log.txt;  rm -f .lock'
+    cmd = 'touch .lock; ../train_network.py --epochs=10 --val=0 | tee -a log.txt;  rm -f .lock'
     print('cmd = [',cmd,']')
     p = subprocess.Popen(cmd, stdout = subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, shell=True)
     out,err = p.communicate()       # all the output and error will get sent to the browser

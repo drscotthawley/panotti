@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 '''
 Given one audio clip, output what the network thinks
 '''
@@ -10,6 +10,7 @@ from os.path import isfile
 from panotti.models import *
 from panotti.datautils import *
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # less TF messages, thanks
 
 def get_canonical_shape(signal):
     if len(signal.shape) == 1:
@@ -21,7 +22,7 @@ def get_canonical_shape(signal):
 def predict_one(signal, sr, model):# class_names, model)#, weights_file="weights.hdf5"):
     X = make_layered_melgram(signal,sr)
     #print("signal.shape, melgram_shape, sr = ",signal.shape, X.shape, sr)
-    return model.predict_proba(X,batch_size=1,verbose=False)[0]
+    return model.predict(X,batch_size=1,verbose=False)[0]
 
 
 def main(args):
@@ -36,7 +37,7 @@ def main(args):
     if model is None:
         print("No weights file found.  Aborting")
         exit(1)
-    model.summary()
+    #model.summary()
 
     class_names = get_class_names(args.classpath)
     nb_classes = len(class_names)
@@ -54,12 +55,12 @@ def main(args):
             file_count += 1
             print("File",infile,":",end="")
 
-            signal, sr = librosa.load(infile, mono=mono, sr=resample)   
+            signal, sr = librosa.load(infile, mono=mono, sr=resample)
 
             # resize / cut / pad signal to make expect length of clip (used in training)
             padded_signal = signal
             if (mono) and (dur is not None) and (resample is not None):
-                max_shape = [1, int(dur * resample)] 
+                max_shape = [1, int(dur * resample)]
                 shape = get_canonical_shape(signal)
                 signal = np.reshape(signal, shape)
                 padded_signal = np.zeros(max_shape)

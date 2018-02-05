@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+
 # Author: Braiden King
 # Team 15
 # HackMT 2018

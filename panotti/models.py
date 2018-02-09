@@ -29,7 +29,7 @@ def MyCNN_Keras2(X, nb_classes, nb_layers=4):
     K.set_image_data_format('channels_first')
 
     nb_filters = 32  # number of convolutional filters = "feature maps"
-    kernel_size = (3, 3)  # convolution kernel size
+    kernel_size = (3, 2)  # convolution kernel size
     pool_size = (2, 2)  # size of pooling area for max pooling
     cl_dropout = 0.5    # conv. layer dropout
     dl_dropout = 0.8    # dense layer dropout
@@ -97,7 +97,7 @@ def make_model(X, class_names, nb_layers=4, try_checkpoint=True,
     else:
         model = serial_model
 
-    opt = 'adadelta' # Adam(lr = 0.00001)  #
+    opt = Adam(lr = 0.00001)  #
     loss = 'categorical_crossentropy'
     metrics = ['accuracy']
     model.compile(loss=loss, optimizer=opt, metrics=metrics)

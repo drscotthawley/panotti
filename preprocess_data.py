@@ -11,6 +11,9 @@ import librosa.display
 from audioread import NoBackendError
 import os
 from multiprocessing import Pool
+import platform
+if platform.system() == 'Windows':
+    import pickle
 
 global_args = []    # after several hours of reading StackExchange on passing args w/ multiprocessing, I'm giving up and using globals
 
@@ -41,6 +44,13 @@ def find_max_shape(path, mono=False, sr=None, dur=None, clean=False):
 
 
 def convert_one_file(file_index):
+    global global_args
+
+    if not global_args:
+        if platform.system() == 'Windows':
+            f = open('data.pickle', 'rb')
+            global_args = pickle.load(f)
+
     (printevery, class_index, class_files, nb_classes, classname, n_load, dirname, resample, mono, already_split, n_train, outpath, subdir, max_shape, clean) = global_args
     infilename = class_files[file_index]
     audio_path = dirname + '/' + infilename
@@ -124,7 +134,6 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
 
     for subdir in sampleset_subdirs: #non-class subdirs of Samples (in case already split)
 
-
         for class_index, classname in enumerate(class_names):   # go through the classes
             print("")           # at the start of each new class, newline
 
@@ -151,11 +160,15 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
 
             parallel = True
             file_indices = tuple( range(len(class_files)) )
+
             if (not parallel):
                 for file_index in file_indices:    # loop over all files
                     task=0
-                    convert_one_file(task, file_index, args)
+                    convert_one_file(file_index)
             else:
+                if platform.system() == 'Windows':
+                    f = open('data.pickle', 'wb')
+                    pickle.dump(global_args, f)
                 pool = Pool(cpu_count)
                 pool.map(convert_one_file, file_indices)
 

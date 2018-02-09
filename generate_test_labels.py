@@ -20,7 +20,7 @@ def test():
     for f in files:
         files.set_description("Processing %s" % f)
         path = (os.path.join('raw_data', f))
-        increment = int(44100 * .2)
+        increment = int(44100 * .15)
         y, sr  = librosa.load(path, 44100)
         outfile = open(os.path.join('raw_data/generated/', f.replace('.wav', '.txt')), 'w')
         for i in range(4410, len(y), increment):
@@ -30,9 +30,10 @@ def test():
             clip = librosa.util.fix_length(y[i:i+increment], increment)
             outpath = 'Samples/no/%s-%d-%d.wav'%(f.replace(' ','-'), i, i+increment)
             
-            if class_names[np.argmax(predict_one(clip, sr, model))] == 'yes':
-                ons = librosa.onset.onset_detect(y=clip, sr=44100, units='samples')[0]/44100.
-                outfile.write('\t'.join([str(start+ons), str(start+ons), '\n']))
+            # if class_names[np.argmax(predict_one(clip, sr, model))] == 'yes':
+            ons = librosa.onset.onset_detect(y=clip, sr=44100, units='samples')/44100.
+            for o in ons:
+                outfile.write('\t'.join([str(start+o), str(start+o), '\n']))
         
         outfile.close()
               

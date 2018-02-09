@@ -29,7 +29,7 @@ def MyCNN_Keras2(X, nb_classes, nb_layers=4):
     K.set_image_data_format('channels_first')
 
     nb_filters = 32  # number of convolutional filters = "feature maps"
-    kernel_size = (3, 2)  # convolution kernel size
+    kernel_size = (4, 4)  # convolution kernel size
     pool_size = (2, 2)  # size of pooling area for max pooling
     cl_dropout = 0.5    # conv. layer dropout
     dl_dropout = 0.8    # dense layer dropout
@@ -39,12 +39,13 @@ def MyCNN_Keras2(X, nb_classes, nb_layers=4):
     print(" MyCNN_Keras2: X.shape = ",X.shape,", channels = ",channels)
     input_shape = (channels, X.shape[2], X.shape[3])
     model = Sequential()
-    model.add(Conv2D(nb_filters, kernel_size, padding='valid', input_shape=input_shape))
+    model.add(Conv2D(nb_filters, kernel_size, padding='same', input_shape=input_shape, ))
     model.add(BatchNormalization(axis=1))
     model.add(Activation('relu'))        # Leave this relu & BN here.  ELU is not good here (my experience)
 
-    for layer in range(nb_layers-1):   # add more layers than just the first
-        model.add(Conv2D(nb_filters, kernel_size))
+    for layer, index in enumerate(range(nb_layers-1)):   # add more layers than just the first
+        print ("adding a layer")
+        model.add(Conv2D(nb_filters, (max(1,kernel_size[0]-index), max(1, kernel_size[1]-index)), padding='same'))
         #model.add(BatchNormalization(axis=1))  # ELU authors reccommend no BatchNorm. I confirm
         model.add(ELU(alpha=1.0))
         model.add(MaxPooling2D(pool_size=pool_size))

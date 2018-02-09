@@ -14,7 +14,7 @@ def process_rawdata():
         label = path.replace('audio', 'labels').replace('.wav', '.txt')
         label_times = np.array([np.float(s.split('\t')[0]) for s in open(label, 'r').readlines()])
         y, sr  = librosa.load(path, 44100)
-        increment = int(44100 * .1)
+        increment = int(44100 * .15)
         for i in range(0, len(y), increment):
             start = i/44100
             end = (i + increment)/44100

@@ -13,8 +13,8 @@ This is a version of the [audio-classifier-keras-cnn](https://github.com/drscott
 * librosa
 * matplotlib
 * h5py
-* optional: pygame (for exampes/headgames.py), sox (SOund eXchange app; for generating test tones in binaural example)
 * optional: sox ("Sound eXchange": command-line utility for examples/binaural. Install via "apt-get install sox")
+* optional: pygame (for exampes/headgames.py)
 
 ## Demo
 I'm not shipping this with any audio but you can generate some for the 'fake binaural' example (requires sox):
@@ -97,7 +97,12 @@ This accuracy is comparable to the [original 2010 study by Stein et al.](http://
 
 This was achieved by running for 10 hours on [our workstation with an NVIDIA GTX1080 GPU](https://pcpartpicker.com/b/4xLD4D). 
 
-**Future Work**: So, the Stein et al. data was a great test case, and now we have confidence to apply this method to other datasets.  I just got a new audio dataset I want to try, but it's small and will probably require some augmentation.  And, this github repo and the code itself are still not "cleaned up" for public reading/usage. 
+## Extra Tricks
+- We have multi-GPU training.  The saving & loading means we get warning messages from Keras. Ignore those. It's because if we compile both the parallel model and its
+serial counterpart, it breaks things. So we leave the serial one uncompiled and that's the one we have to save. I regard this problem as a 'bug' in the Keras multi-gpu protocols.
+- Speaking of saving & loading, we encode the names of the output classes in the weights.hdf5 file using a HDF5 attribute 'class_names'.
+
+
 
 <hr>
 -- [@drscotthawley](https://drscotthawley.github.io)

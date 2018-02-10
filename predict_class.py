@@ -33,15 +33,18 @@ def main(args):
     mono = args.mono
 
     # Load the model
-    model = load_model(weights_file)
+    model, class_names = load_model_ext(weights_file)
     if model is None:
         print("No weights file found.  Aborting")
         exit(1)
     #model.summary()
 
-    class_names = get_class_names(args.classpath)
+    #TODO: Keras load_models is spewing warnings about not having been compiled. we can ignore those,
+    #   how to turn them off?
+
+    #class_names = get_class_names(args.classpath) # now encoding names in model weights file
     nb_classes = len(class_names)
-    print(nb_classes," classes to choose from")
+    print(nb_classes," classes to choose from: ",class_names)
 
     file_count = 0
     json_file = open("data.json", "w")

@@ -18,8 +18,8 @@ if version_info >= (3, 4):
     from plistlib import loads as readPlistFromString
 else:
     from plistlib import readPlistFromString
-    
-    
+
+
 # Current working directory
 CWD = os.getcwd()
 
@@ -28,7 +28,7 @@ UNKNOWN_FOLDER = "New Folder"
 # Folders
 folders = {
     UNKNOWN_FOLDER: []
-    
+
 }
 
 for relative_path in os.listdir(CWD):
@@ -40,14 +40,14 @@ for relative_path in os.listdir(CWD):
 
     try:
         output = subprocess.check_output(['mdls','-plist','-', full_path])
-        
-        
-        
+
+
+
         plist = readPlistFromString(output)
-        
+
         #print(output)
-        
-      
+
+
           # Skip invisible files
        # if plist['kMDItemFSInvisible'] is True:
          #   continue
@@ -57,51 +57,60 @@ for relative_path in os.listdir(CWD):
 #        if not os.path.isfile(full_path) or os.path.islink(full_path):
 #            if 'com.apple.application' not in plist.get('kMDItemContentTypeTree', []):
 #                continue
-        
-        if ('kMDItemMusicalInstrumentName' in plist) or ('kMDItemMusicalInstrumentCategory' in plist) or ('kMDItemMusicalGenre' in plist):
-           
-            
+
+        if ('kMDItemMusicalInstrumentName' in plist) or ('kMDItemMusicalInstrumentCategory' in plist)
+            or ('kMDItemMusicalGenre' in plist) or ('kMDItemAppleLoopDescriptors' in plist):
+
+
             tag1 = plist['kMDItemMusicalInstrumentName']
-            
+
             tag2 = plist['kMDItemMusicalInstrumentCategory']
-        
+
             tag3 = plist['kMDItemMusicalGenre']
-                
+
+            tag4 = plist['kMDItemAppleLoopDescriptors']
+
             if tag1 not in folders:
                     folders[tag1] = []
-                    
+
             if tag2 not in folders:
                     folders[tag2] = []
-                    
+
             if tag3 not in folders:
                     folders[tag3] = []
-                
+
+            if tag4 not in folders:
+                    folders[tag4] = []
+
             new_path = os.path.join(CWD, tag1, relative_path)
             folders[tag1].append([full_path, new_path])
-        
+
             new_path = os.path.join(CWD, tag2, relative_path)
             folders[tag2].append([full_path, new_path])
-            
+
             new_path = os.path.join(CWD, tag3, relative_path)
             folders[tag3].append([full_path, new_path])
-        
+
+            new_path = os.path.join(CWD, tag4, relative_path)
+            folders[tag4].append([full_path, new_path])
+
         else:
             # Move file to the catch-all folder
             new_path = os.path.join(CWD, UNKNOWN_FOLDER, relative_path)
             folders[UNKNOWN_FOLDER].append([full_path, new_path])
 
-     
-       
+
+
     except:
         print("Could not process: %s" % full_path)
-        
+
 
  #Create folders and move files
 for (folder, tuples) in folders.items():
     folder_path = os.path.join(CWD, folder)
             #print(folder_path)
-            
-        
+
+
             # Create folder if it does not exist
     try:
         os.makedirs(folder_path)
@@ -109,18 +118,18 @@ for (folder, tuples) in folders.items():
     except OSError as exception:
         if exception.errno != errno.EEXIST:
             raise
-            
-        
+
+
             # Move files
     for t in tuples:
         try:
-            
+
             shutil.copy(t[0],t[1])
             shutil.copy(t[0],t[2])
             shutil.copy(t[0],t[3])
             shutil.copy(t[0],t[4])
-                 
-                 
-                   
+
+
+
         except:
             print("Could not move file: %s" % t[0])

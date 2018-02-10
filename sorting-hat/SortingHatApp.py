@@ -26,7 +26,6 @@ from kivy.uix.popup import Popup
 from kivy.uix.floatlayout import FloatLayout
 from kivy.garden.filebrowser import FileBrowser
 import subprocess
-#import scandir
 
 from functools import partial
 import os
@@ -270,6 +269,7 @@ class SHPanels(TabbedPanel):
 
 class SortingHatApp(App):
     def build(self):
+        self.icon = 'static/sorting-hat-logo.png'
         return SHPanels()
 
 

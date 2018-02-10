@@ -1,7 +1,9 @@
 #! /usr/bin/env python3
 
 '''
-Classify sounds using database - evaluation code
+Classify sounds using database - evaluation code.
+Generates a score based on contents of Preproc/Test/
+
 Author: Scott H. Hawley
 
 This is kind of a mixture of Keun Woo Choi's code https://github.com/keunwoochoi/music-auto_tagging-keras

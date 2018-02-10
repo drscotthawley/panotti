@@ -172,10 +172,6 @@ class SHPanels(TabbedPanel):
     def selected(self, filename):
         print("selected: %s" % filename[0])
 
-    def _on_file_drop(self, window, file_path):
-        self.samplesDir = file_path.decode('UTF-8')
-        self.ids['samplesDir'].text = self.samplesDir
-        return
 
     def dismiss_popup(self):
         self._popup.dismiss()
@@ -186,17 +182,25 @@ class SHPanels(TabbedPanel):
                             size_hint=(0.9, 0.9))
         self._popup.open()
 
-    def load(self, path, filename):
-        print("filename = ",filename)
-        self.samplesDir = str(filename[0])
+    def got_samplesDir(self):
         self.ids['samplesDir'].text = self.samplesDir
-
         self.totalClips = 0
         for root, dirs, files in os.walk(self.samplesDir):
             self.totalClips += len(files)
         self.ids['statusMsg'].text = "Number of clips = "+str(self.totalClips)
+        return
 
+    def load(self, path, filename):
+        print("filename = ",filename)
+        self.samplesDir = str(filename[0])
         self.dismiss_popup()
+        self.got_samplesDir()
+        return
+
+    def _on_file_drop(self, window, file_path):
+        self.samplesDir = file_path.decode('UTF-8')
+        self.got_samplesDir()
+        return
 
 
 class SortingHatApp(App):

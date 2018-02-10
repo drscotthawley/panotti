@@ -12,12 +12,11 @@ from PIL import Image
 import os
 from multiprocessing import Pool
 import numpy as np
+from functools import partial
 
-global_args =[]
 
-def convert_one_file(file_index):
-    global global_args
-    (file_list,  mono) = global_args
+def convert_one_file(file_list,  mono, file_index):
+
     infile = file_list[file_index]
     out_format = 'npy'
     if os.path.isfile(infile):
@@ -32,14 +31,12 @@ def convert_one_file(file_index):
 
 
 def main(args):
-    global global_args
-    global_args = (args.file, args.mono)
 
     file_indices = tuple( range(len(args.file)) )
 
     cpu_count = os.cpu_count()
     pool = Pool(cpu_count)
-    pool.map(convert_one_file, file_indices)
+    pool.map(partial(convert_one_file, args.file, args.mono), file_indices)
     return
 
 

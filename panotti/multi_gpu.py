@@ -6,8 +6,7 @@ from keras.callbacks import Callback, ModelCheckpoint
 import tensorflow as tf
 from tensorflow.python.client import device_lib
 import numpy as np
-
-
+from panotti import models
 
 def make_serial(model, parallel=True):   # Undoes make_parallel, but keyword included in case it's called on a serial model
     if (parallel):
@@ -60,7 +59,7 @@ class MultiGPUModelCheckpoint(Callback):
 
     def __init__(self, filepath, monitor='val_loss', verbose=0,
                  save_best_only=False, save_weights_only=False,
-                 mode='auto', period=1, serial_model=None):
+                 mode='auto', period=1, serial_model=None, class_names=None):
         super(MultiGPUModelCheckpoint, self).__init__()
         self.monitor = monitor
         self.verbose = verbose
@@ -69,6 +68,7 @@ class MultiGPUModelCheckpoint(Callback):
         self.save_weights_only = save_weights_only
         self.period = period
         self.epochs_since_last_save = 0
+        self.class_names = class_names
 
         if (serial_model is None):
             self.serial_model = model
@@ -117,7 +117,9 @@ class MultiGPUModelCheckpoint(Callback):
                         if self.save_weights_only:
                             self.serial_model.save_weights(filepath, overwrite=True)
                         else:
-                            self.serial_model.save(filepath, overwrite=True)
+                            #self.serial_model.save(filepath, overwrite=True)
+                            models.save_model_ext(self.serial_model, filepath, overwrite=True, class_names=self.class_names)
+
                     else:
                         if self.verbose > 0:
                             print('\nEpoch %05d: %s did not improve' %
@@ -128,8 +130,8 @@ class MultiGPUModelCheckpoint(Callback):
                 if self.save_weights_only:
                     self.serial_model.save_weights(filepath, overwrite=True)
                 else:
-                    self.serial_model.save(filepath, overwrite=True)
-
+                    #self.serial_model.save(filepath, overwrite=True)
+                    models.save_model_ext(self.serial_model, filepath, overwrite=True, class_names=self.class_names)
 
 
 '''

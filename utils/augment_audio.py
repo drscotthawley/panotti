@@ -14,8 +14,8 @@ import librosa
 from random import getrandbits
 import sys, getopt, os
 from multiprocessing import Pool
+from functools import partial
 
-global_args = []
 
 def random_onoff():                # randomly turns on or off
     return bool(getrandbits(1))
@@ -112,9 +112,7 @@ def augment_audio(y, sr, n_augment = 0, allow_speedandpitch = True, allow_pitch 
     return mods
 
 
-def augment_one_file(file_index):
-    global global_args
-    (file_list, n_augment, quiet) = global_args
+def augment_one_file(file_list, n_augment, quiet, file_index):
 
     infile = file_list[file_index]
     if os.path.isfile(infile):
@@ -133,7 +131,6 @@ def augment_one_file(file_index):
     return
 
 def main(args):
-    global global_args
     np.random.seed(1)
     quiet = args.quiet
 
@@ -148,10 +145,9 @@ def main(args):
 
     # read in every file on the list, augment it lots of times, output all those
     file_indices = tuple( range(len(args.file)) )
-    global_args = (args.file, args.N, args.quiet)
     cpu_count = os.cpu_count()
     pool = Pool(cpu_count)
-    pool.map(augment_one_file, file_indices)
+    pool.map(partial(augment_one_file, args.file, args.N, args.quiet), file_indices)
 
     '''
     for infile in args.file:

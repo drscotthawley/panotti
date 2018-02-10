@@ -23,6 +23,7 @@ from scipy import *
 import librosa
 import os, sys
 from multiprocessing import Pool
+from functools import partial
 
 
 # TODO: this never checks in case one of the operations fails
@@ -247,10 +248,7 @@ def project_multi(mono_sig, infile, sr, start, end, steps, quiet=False):
         print("")
     return
 
-global_args = []
-def binauralify_one_file(file_index):
-    global global_args
-    (file_list, n_az, quiet) = global_args
+def binauralify_one_file(file_list, n_az, quiet,file_index):
 
     infile = file_list[file_index]
     if os.path.isfile(infile):
@@ -262,16 +260,14 @@ def binauralify_one_file(file_index):
     return
 
 def main(args):
-    global global_args
 
     download_if_missing()                # make sure we've got the hrtf data we need
     cpu_count = os.cpu_count()
     print("",cpu_count,"CPUs detected: Parallel execution across",cpu_count,"CPUs")
     file_indices = tuple( range(len(args.file)) )
 
-    global_args = [args.file, args.n_az, args.quiet]
     pool = Pool(cpu_count)
-    pool.map(binauralify_one_file, file_indices)
+    pool.map(partial(binauralify_one_file, args.file, args.n_az, args.quiet), file_indices)
     '''
     for infile in args.file:
         if os.path.isfile(infile):

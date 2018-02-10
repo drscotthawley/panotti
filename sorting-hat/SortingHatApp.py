@@ -4,10 +4,14 @@ SortingHatApp  - Desktop version of Sorting H.A.T. program.
 
 Author: Scott H. Hawley @drscotthawley
 
-TODO: - Everything.  Still just a facade, doesn't actually work at all.
-      - Just learning Kivy as I write this. Still quite confused.
-      - Should create a "ButtonBarAndStatus" class that can be reused multiple times
+TODO:
+    - Everything.  Still just a facade, doesn't actually work at all.
+    - Just learning Kivy as I write this. Still quite confused.
+    - Should create a "ButtonBarAndStatus" class that can be reused multiple times
 
+Requirements:
+    $ pip install kivy kivy-garden scandir functools
+    $ garden install filebrowser
 ============
 '''
 
@@ -21,11 +25,29 @@ from kivy.core.window import Window
 from kivy.uix.popup import Popup
 from kivy.uix.floatlayout import FloatLayout
 from kivy.garden.filebrowser import FileBrowser
+import subprocess
+#import scandir
 
 from functools import partial
 import os
 
 PANOTTI_HOME = os.path.expanduser("~")+"/github/panotti"
+
+def count_files(folder):
+    total = 0
+    for root, dirs, files in os.walk(folder):
+        total += len(files)
+    return total
+
+
+def folder_size(path):   # get bytes
+    total = 0
+    for entry in os.scandir(path):
+        if entry.is_file():
+            total += entry.stat().st_size
+        elif entry.is_dir():
+            total += folder_size(entry.path)
+    return total
 
 Builder.load_string("""
 #:import expanduser os.path.expanduser
@@ -71,7 +93,7 @@ Builder.load_string("""
                 Button:
                     text: "Upload"
                     id: uploadButton
-                    on_release: root.start_prog_anim('uploadProgress')
+                    on_release: root.upload('uploadProgress')
                 ProgressBar:
                     id: uploadProgress
                     value: 0
@@ -144,7 +166,7 @@ class SHPanels(TabbedPanel):
         self.ready_to_train = False
 
     server_progress = ObjectProperty()
-    def next(self, barname, dt):
+    def next(self, barname, dt):         # little updater for 'fake' progress bar updates
         self.ids[barname].value += 1
         if (self.ids[barname].value >= 100):
             self.progress_events[barname].cancel()
@@ -162,8 +184,52 @@ class SHPanels(TabbedPanel):
             self.ids[barname].value = 0
             self.progress_events[barname] = Clock.schedule_interval(partial(self.next,barname), 1/50)
 
+
+    def monitor_preproc_progress(self, folder, p, dt):
+        files_processed = count_files(folder)      # Folder should be Preproc
+        self.ids['preprocProgress'].value = max(5, int(files_processed / self.totalClips * 100))
+        self.ids['statusMsg'].text = str(files_processed)+"/"+str(self.totalClips)+" files processed"
+        if (self.ids['preprocProgress'].value >= 99.4) or (p.poll() is not None):
+            self.preproc_sched.cancel()
+
     def preproc(self,barname):
-        self.start_prog_anim(barname)
+        cmd = 'cd '+self.samplesDir+'/..; rm -rf Preproc'
+        p = subprocess.call(cmd, shell=True)                       # blocking
+        cmd = 'cd '+self.samplesDir+'/..; '+PANOTTI_HOME+'/preprocess_data.py -s -m --dur=4.0 -r=44100 | tee log.txt '
+        p = subprocess.Popen(cmd, shell=True)                      # non-blocking
+        self.preproc_sched = Clock.schedule_interval(partial(self.monitor_preproc_progress,self.samplesDir+'/../Preproc', p), 0.2)
+
+        return
+
+    def actual_upload(self, archive_file):   #
+        return
+
+    def monitor_archive_progress(self, archive_file, orig_size, p, dt):   # archive as in zip or tar
+        #TODO: ok this is sloppy but estimating compression is 'hard'; we generally get around a factor of 10 in compression
+        if (os.path.isfile(archive_file) ):  # problem with this is, zip uses an alternate name until it's finished
+            archive_size = os.path.getsize(archive_file)
+            est_comp_ratio = 10
+            est_size = orig_size/est_comp_ratio
+            percent = int(archive_size / est_size * 100)
+            self.ids['statusMsg'].text = "Archiving... "+str(percent)+" %"
+
+        if (p.poll() is not None):           # archive process completed
+            self.archive_sched.cancel()
+            self.ids['statusMsg'].text = "Now Uploading..."
+            barname = 'uploadProgress'
+            self.progress_events[barname] = Clock.schedule_interval(partial(self.next,barname), 1/50)
+        return
+
+    def upload(self,barname):           # this actually initiates "archiving" (zip/tar), and THEN uploads
+        self.ready_to_upload = (self.ids['preprocProgress'].value >= 100) and (self.ids['serverProgress'].value >= 100)
+        if (self.ready_to_upload):
+            archive_file = self.samplesDir+'/../Preproc.tar.gz'
+            self.ids['statusMsg'].text = "Archiving Preproc...)"
+            cmd = 'cd '+self.samplesDir+'/..; rm -f '+archive_file+';  tar cfz '+archive_file+' Preproc/'
+            p = subprocess.Popen(cmd, shell=True)
+            orig_size = folder_size(self.samplesDir+'/../Preproc')
+            self.archive_sched = Clock.schedule_interval(partial(self.monitor_archive_progress, archive_file, orig_size, p), 0.2)
+        return # self.start_prog_anim(barname)
 
     def open(self, path, filename):
         with open(os.path.join(path, filename[0])) as f:
@@ -184,10 +250,9 @@ class SHPanels(TabbedPanel):
 
     def got_samplesDir(self):
         self.ids['samplesDir'].text = self.samplesDir
-        self.totalClips = 0
-        for root, dirs, files in os.walk(self.samplesDir):
-            self.totalClips += len(files)
-        self.ids['statusMsg'].text = "Number of clips = "+str(self.totalClips)
+        self.totalClips = count_files(self.samplesDir)
+        text = "Contains "+str(self.totalClips)+" files"
+        self.ids['statusMsg'].text = text
         return
 
     def load(self, path, filename):

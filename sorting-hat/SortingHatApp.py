@@ -17,7 +17,7 @@ Requirements:
 
 from kivy.app import App
 from kivy.clock import Clock
-from kivy.uix.tabbedpanel import TabbedPanel
+from kivy.uix.tabbedpanel import TabbedPanel, TabbedPanelItem
 from kivy.lang import Builder
 from kivy.properties import ObjectProperty
 from kivy.uix.progressbar import ProgressBar
@@ -25,12 +25,14 @@ from kivy.core.window import Window
 from kivy.uix.popup import Popup
 from kivy.uix.floatlayout import FloatLayout
 from kivy.garden.filebrowser import FileBrowser
+from settingsjson import settings_json
+import time
 import subprocess
 
 from functools import partial
 import os
 
-PANOTTI_HOME = os.path.expanduser("~")+"/github/panotti"
+PANOTTI_HOME = os.path.expanduser("~")+"/panotti"
 
 def count_files(folder):
     total = 0
@@ -51,13 +53,18 @@ def folder_size(path):   # get bytes
 Builder.load_string("""
 #:import expanduser os.path.expanduser
 
+<CustomWidthTabb@TabbedPanelItem>
+    width: self.texture_size[0]
+    padding: 20, 0
+    size_hint_x: None
+
 <SHPanels>:
     id: SH_widget
-    #size_hint: .5, .5
-    pos_hint: {'center_x': .5, 'center_y': .5}
+    size_hint: 1,1
     do_default_tab: False
-    tab_width: self.width/4
-    TabbedPanelItem:
+    tab_width: None
+    CustomWidthTabb:
+        id: trainPanel
         text: 'Train the Neural Net'
         BoxLayout:
             orientation: 'vertical'
@@ -107,26 +114,51 @@ Builder.load_string("""
                     value: 0
             Label:
                 id: statusMsg
-                text: "Status: Amazing statuses coming your way..."
+                text: "Status: Initial State"
                 center: self.parent.center
 
-    TabbedPanelItem:
+    CustomWidthTabb:
         text: 'Sort Your Library'
+        id: sortPanel
         BoxLayout:
-            Label:
-                text: 'Second tab content area'
+            BoxLayout:
+                orientation: 'vertical'
+                Button:
+                    text: 'Select Files to Sort'
+                    size_hint_y: 0.1
+                    on_release: SH_widget.show_load()
+                ScrollView:
+                    Label:
+                        id: sortFilesDisplay
+                        text: 'No Files selected'
             Button:
-                text: 'Button that does nothing'
-    TabbedPanelItem:
+                text: 'Go!'
+    CustomWidthTabb:
         text: 'About'
-        RstDocument:
-            text:
-                '\\n'.join(("About", "-----------",
-                "Sorting H.A.T.* - Organize your audio library with the help of neural nets."))
-    TabbedPanelItem:
+        BoxLayout:
+            RstDocument:
+                text:
+                    '\\n'.join(("About", "-----------",
+                    "Sorting H.A.T.* - Organize your audio library with the help of neural nets.\\n",
+                    "Built on `Panotti <http://github.com/drscotthawley/panotti>`_ by @drscotthawley"))
+
+            Image:
+                source: 'static/sorting-hat-logo.png'
+                canvas.before:
+                    Color:
+                        rgba: .9, .9, .9, 1
+                    Rectangle:
+                        pos: self.pos
+                        size: self.size
+
+    CustomWidthTabb:
+        id: settingsPanel
         text: 'Settings'
-        Label:
-            text: 'There is a way to have Kivy do settings automatically...'
+        on_press: app.open_settings()
+        Button:
+            text: 'Press to go to Train'
+            on_release: root.switch_to(trainPanel)
+
 
 
 <LoadDialog>:
@@ -136,19 +168,11 @@ Builder.load_string("""
         orientation: "vertical"
         FileBrowser:
             id: filechooser
+            multiselect: True
             dirselect: True
             path: expanduser("~")
-        BoxLayout:
-            size_hint_y: None
-            height: 30
-            Button:
-                text: "Cancel"
-                on_release: root.cancel()
-
-            Button:
-                text: "Load"
-                on_release: root.load(filechooser.path, filechooser.selection)
-
+            on_canceled: root.cancel()
+            on_success: root.load(filechooser.path, filechooser.selection)
 """)
 
 class LoadDialog(FloatLayout):
@@ -158,7 +182,9 @@ class LoadDialog(FloatLayout):
 class SHPanels(TabbedPanel):
     def __init__(self, **kwargs):
         super(SHPanels, self).__init__(**kwargs)
+        Clock.schedule_once(self.on_tab_width, 0.1)
         Window.bind(on_dropfile=self._on_file_drop)
+        self.last_drop_time = time.time()-10000
         self.progress_events = {}
         self.ready_to_preproc = False
         self.ready_to_upload = False
@@ -186,7 +212,7 @@ class SHPanels(TabbedPanel):
 
     def monitor_preproc_progress(self, folder, p, dt):
         files_processed = count_files(folder)      # Folder should be Preproc
-        self.ids['preprocProgress'].value = max(5, int(files_processed / self.totalClips * 100))
+        self.ids['preprocProgress'].value = max(3, int(files_processed / self.totalClips * 100))
         self.ids['statusMsg'].text = str(files_processed)+"/"+str(self.totalClips)+" files processed"
         if (self.ids['preprocProgress'].value >= 99.4) or (p.poll() is not None):
             self.preproc_sched.cancel()
@@ -247,30 +273,79 @@ class SHPanels(TabbedPanel):
                             size_hint=(0.9, 0.9))
         self._popup.open()
 
-    def got_samplesDir(self):
-        self.ids['samplesDir'].text = self.samplesDir
-        self.totalClips = count_files(self.samplesDir)
-        text = "Contains "+str(self.totalClips)+" files"
-        self.ids['statusMsg'].text = text
+    def got_filenames(self, filenames):
+        if (self.current_tab == self.ids['trainPanel']):
+            self.samplesDir = str(filenames[0])
+            self.ids['samplesDir'].text = self.samplesDir
+            self.totalClips = count_files(self.samplesDir)
+            text = "Contains "+str(self.totalClips)+" files"
+            self.ids['statusMsg'].text = text
+        elif (self.current_tab == self.ids['sortPanel']):
+            self.sortFileList = filenames
+            self.ids['sortFilesDisplay'].text  = ''
+            for name in filenames:
+                self.ids['sortFilesDisplay'].text += str(name) + '\n'
         return
 
-    def load(self, path, filename):
-        print("filename = ",filename)
-        self.samplesDir = str(filename[0])
+    def load(self, path, filenames):
         self.dismiss_popup()
-        self.got_samplesDir()
-        return
+        if (filenames):
+            self.got_filenames(filenames)
 
-    def _on_file_drop(self, window, file_path):
-        self.samplesDir = file_path.decode('UTF-8')
-        self.got_samplesDir()
-        return
+    def get_id(self,  instance):
+        for id, widget in instance.parent.ids.items():
+            if widget.__self__ == instance:
+                return id
+
+    def consolidate_drops(self, file_path):
+        now = time.time()
+        tolerance = 1
+        if (now - self.last_drop_time > tolerance):
+            self.sortFileList=[file_path]
+            self.ids['sortFilesDisplay'].text = file_path
+        else:
+            self.sortFileList.append(file_path)
+            self.ids['sortFilesDisplay'].text += '\n'+file_path
+        self.last_drop_time = now
+        print("Sort!  self.sortFileList = ",self.sortFileList)
+
+
+    def _on_file_drop(self, window, file_path):   # this fires multiple times if multiple files are dropped
+        if (self.current_tab == self.ids['trainPanel']):
+            print("Train!")
+            self.samplesDir = file_path.decode('UTF-8')
+            self.got_filenames()
+        elif (self.current_tab == self.ids['sortPanel']):
+            self.consolidate_drops(file_path.decode('UTF-8'))
+
+    def my_handle_settings(self):
+        root.open_settings()
+        self.ids['SH_widget'].switch_to(self.ids['trainPanel'])
 
 
 class SortingHatApp(App):
     def build(self):
         self.icon = 'static/sorting-hat-logo.png'
+        self.use_kivy_settings = False
         return SHPanels()
+
+    def build_config(self, config):
+        config.setdefaults('example', {
+            'boolexample': True,
+            'numericexample': 10,
+            'optionsexample': 'option2',
+            'stringexample': 'some_string',
+            'pathexample': '/some/path'})
+
+    def build_settings(self, settings):
+        settings.add_json_panel('Settings',
+                                self.config,
+                                data=settings_json)
+
+    def on_config_change(self, config, section,
+                         key, value):
+        print(config, section, key, value)
+
 
 
 if __name__ == '__main__':

@@ -32,7 +32,7 @@ def convert_one_file(file_list, out_format, mono, file_index):
             im = Image.fromarray(arr).convert('L')
         else:
             im = Image.fromarray(arr).convert('RGB')
-        im.save(outfile)
+        im.save(outfile, quality=90)
     return
 
 

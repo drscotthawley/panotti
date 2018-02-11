@@ -33,7 +33,7 @@ def train_network(weights_file="weights.hdf5", classpath="Preproc/Train/", epoch
 
     save_best_only = (val_split > 1e-6)
     checkpointer = MultiGPUModelCheckpoint(filepath=weights_file, verbose=1, save_best_only=save_best_only,
-        serial_model=serial_model, period=2)
++        serial_model=serial_model, period=2, class_names=class_names)
     #earlystopping = EarlyStopping(patience=12)
 
     model.fit(X_train, Y_train, batch_size=batch_size, epochs=epochs, shuffle=True,

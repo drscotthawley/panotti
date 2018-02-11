@@ -28,9 +28,7 @@ def predict_one(signal, sr, model, expected_melgram_shape):# class_names, model)
         min1 = min(  Xnew.shape[1], X.shape[1]  )
         min2 = min(  Xnew.shape[2], X.shape[2]  )
         min3 = min(  Xnew.shape[3], X.shape[3]  )
-
         Xnew[0,:min1,:min2,:min3] = X[0,:min1,:min2,:min3]  # truncate
-        print("Xnew.shape = ",Xnew.shape)
         X = Xnew
     return model.predict(X,batch_size=1,verbose=False)[0]
 
@@ -58,7 +56,6 @@ def main(args):
     print(nb_classes," classes to choose from: ",class_names)
     expected_melgram_shape = model.layers[0].input_shape[1:]
     print("Expected_melgram_shape = ",expected_melgram_shape)
-
     file_count = 0
     json_file = open("data.json", "w")
     json_file.write('{\n"items":[')

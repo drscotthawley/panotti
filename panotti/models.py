@@ -100,7 +100,10 @@ def old_model(X, nb_classes, nb_layers=4):  # original model used in reproducing
 def load_model_ext(filepath, custom_objects=None):
     model = load_model(filepath, custom_objects=custom_objects)
     f = h5py.File(filepath, mode='r')
-    class_names = None
+
+    # initialize class_names with numbers (strings) in case hdf5 file doesn't have any
+    output_length = model.layers[-1].output_shape[1]
+    class_names = [str(x) for x in range(output_length)]
     if 'class_names' in f.attrs:
         class_names = f.attrs.get('class_names').tolist()
         class_names = [x.decode() for x in class_names]

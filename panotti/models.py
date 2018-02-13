@@ -189,12 +189,6 @@ def setup_model(X, class_names, nb_layers=4, try_checkpoint=True,
             else:
                 print('No weights file detected, so starting from scratch.')
 
-    gpu_count = get_available_gpus()
-    if (gpu_count >= 2):
-        print(" Parallel run on",gpu_count,"GPUs")
-        model = make_parallel(serial_model, gpu_count=gpu_count)
-    else:
-        model = serial_model
 
     opt = 'adadelta' # Adam(lr = 0.00001)  # So far, adadelta seems to work the best of things I've tried
     metrics = ['accuracy']
@@ -204,11 +198,19 @@ def setup_model(X, class_names, nb_layers=4, try_checkpoint=True,
     else:
         loss = 'categorical_crossentropy'
 
-    model.compile(loss=loss, optimizer=opt, metrics=metrics)
-    #serial_model.compile(loss=loss, optimizer=opt, metrics=metrics)     # Breaks everything if you compile both.  Why??
+    serial_model.compile(loss=loss, optimizer=opt, metrics=metrics)
+
+    # Multi-GPU "parallel" capability
+    gpu_count = get_available_gpus()
+    if (gpu_count >= 2):
+        print(" Parallel run on",gpu_count,"GPUs")
+        model = make_parallel(serial_model, gpu_count=gpu_count)
+        model.compile(loss=loss, optimizer=opt, metrics=metrics)
+    else:
+        model = serial_model
 
     if (not quiet):
         print("Summary of serial model (duplicated across",gpu_count,"GPUs):")
         serial_model.summary()  # print out the model layers
 
-    return model, serial_model
+    return model, serial_model   # fchollet says to hang out to the serial model for checkpointing

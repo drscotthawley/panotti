@@ -24,8 +24,13 @@ from tensorflow.python.client import device_lib
 from panotti.multi_gpu import make_parallel, get_available_gpus
 import h5py
 
-
-def MyCNN_Keras2(X, nb_classes, nb_layers=4):
+# This is a VGG-style network that I made by 'dumbing down' @keunwoochoi's compact_cnn code
+# I have not attempted much optimization, however it *is* fairly understandable
+def MyCNN_Keras2(X_shape, nb_classes, nb_layers=4):
+    # Inputs:
+    #    X_shape = [ # spectrograms per batch, # audio channels, # spectrogram freq bins, # spectrogram time bins ]
+    #    nb_classes = number of output n_classes
+    #    nb_layers = number of conv-pooling sets in the CNN
     from keras import backend as K
     K.set_image_data_format('channels_first')
 
@@ -35,10 +40,8 @@ def MyCNN_Keras2(X, nb_classes, nb_layers=4):
     cl_dropout = 0.5    # conv. layer dropout
     dl_dropout = 0.6    # dense layer dropout
 
-    channels = X.shape[1]   # channels = 1 for mono, 2 for stereo
-
-    print(" MyCNN_Keras2: X.shape = ",X.shape,", channels = ",channels)
-    input_shape = (channels, X.shape[2], X.shape[3])
+    print(" MyCNN_Keras2: X_shape = ",X_shape,", channels = ",X_shape[1])
+    input_shape = (X_shape[1], X_shape[2], X_shape[3])
     model = Sequential()
     model.add(Conv2D(nb_filters, kernel_size, padding='valid', input_shape=input_shape))
     model.add(BatchNormalization(axis=1))
@@ -46,14 +49,14 @@ def MyCNN_Keras2(X, nb_classes, nb_layers=4):
 
     for layer in range(nb_layers-1):   # add more layers than just the first
         model.add(Conv2D(nb_filters, kernel_size))
-        #model.add(BatchNormalization(axis=1))  # ELU authors reccommend no BatchNorm. I confirm
+        #model.add(BatchNormalization(axis=1))  # ELU authors reccommend no BatchNorm. I confirm.
         model.add(Activation('elu'))
         model.add(MaxPooling2D(pool_size=pool_size))
         model.add(Dropout(cl_dropout))
 
     model.add(Flatten())
     model.add(Dense(128))            # 128 is 'arbitrary' for now
-    #model.add(Activation('relu'))   # relu (no BN) works fine here, however...
+    #model.add(Activation('relu'))   # relu (no BN) works ok here, however ELU works a bit better...
     model.add(Activation('elu'))
     model.add(Dropout(dl_dropout))
     model.add(Dense(nb_classes))
@@ -61,15 +64,14 @@ def MyCNN_Keras2(X, nb_classes, nb_layers=4):
     return model
 
 
-def old_model(X, nb_classes, nb_layers=4):  # original model used in reproducing Stein et al
+def old_model(X_shape, nb_classes, nb_layers=4):  # original model used in reproducing Stein et al
     from keras import backend as K
     K.set_image_data_format('channels_first')
 
     nb_filters = 32  # number of convolutional filters to use
     pool_size = (2, 2)  # size of pooling area for max pooling
     kernel_size = (3, 3)  # convolution kernel size
-    input_shape = (1, X.shape[2], X.shape[3])
-    input_shape = (X.shape[1], X.shape[2], X.shape[3])
+    input_shape = (X_shape[1], X_shape[2], X_shape[3])
 
     model = Sequential()
     model.add(Conv2D(nb_filters, kernel_size, padding='valid', input_shape=input_shape))
@@ -95,8 +97,31 @@ def old_model(X, nb_classes, nb_layers=4):  # original model used in reproducing
     return model
 
 
-# To attach class names inside the saved model
-#https://stackoverflow.com/questions/44310448/attaching-class-labels-to-a-keras-model
+# Used for when you want to use weights from a previously-trained model,
+# with a different set/number of output classes
+def attach_new_top(model, new_nb_classes, n_pop = 2, n_p_dense = None, last_dropout = 0.6):
+
+    # "penultimate" dense layer was originally 64 or 128. can change it here
+    if (n_p_dense is not None):
+        n_pop = 5
+
+    # pop off the last n_pop layers. We definitely want the last 2: Activation() and Dense(nb_classes)
+    for i in range(n_pop):
+        model.pop()
+
+    if (n_p_dense is not None):
+        model.add(Dense(n_p_dense))
+        model.add(Activation('elu'))
+        model.add(Dropout(last_dropout))
+
+    # attach final output layers
+    model.add(Dense(new_nb_classes))  # new_nb_classes = new number of output classes
+    model.add(Activation("softmax"))
+    return model
+
+
+# Next two routines are for attaching class names inside the saved model .hdf5 weights file
+# From https://stackoverflow.com/questions/44310448/attaching-class-labels-to-a-keras-model
 def load_model_ext(filepath, custom_objects=None):
     model = load_model(filepath, custom_objects=custom_objects)
     f = h5py.File(filepath, mode='r')
@@ -110,7 +135,6 @@ def load_model_ext(filepath, custom_objects=None):
     f.close()
     return model, class_names
 
-
 def save_model_ext(model, filepath, overwrite=True, class_names=None):
     save_model(model, filepath, overwrite)
     if class_names is not None:
@@ -119,22 +143,37 @@ def save_model_ext(model, filepath, overwrite=True, class_names=None):
         f.close()
 
 
-def make_model(X, class_names, nb_layers=4, try_checkpoint=True,
-    weights_file='weights.hdf5', quiet=False, missing_weights_fatal=False):
+# Freezing speeds up training by only declaring all but the last leave_last
+# layers as non-trainable; but  likely results in lower accuracy
+#  NOTE: In practice this achieves so little that I don't even use this:
+#         Most of the model parameters are in the last few layers anyway
+def freeze_layers(model, train_last=3):
+    num_layers = len(model.layers)
+    freeze_layers = min( num_layers - train_last, num_layers )  # any train_last too big, freezes whole model
+    if (train_last < 0):                # special flag to disable freezing
+        freeze_layers = 0
+    print("Freezing ",freeze_layers,"/",num_layers," layers of model")
+    for i in range(freeze_layers):
+        model.layers[i].trainable = False
+    return model
+
+
+# This is the main routine for setting up a model
+def setup_model(X, class_names, nb_layers=4, try_checkpoint=True,
+    weights_file='weights.hdf5', quiet=False, missing_weights_fatal=False, multi_tag=False):
     ''' In the following, the reason we hang on to & return serial_model,
          is because Keras can't save parallel models, but according to fchollet
          the serial & parallel versions will always share the same weights
          (Strange but true!)
     '''
 
-    gpu_count = get_available_gpus()
+    # Here's where one might 'swap out' different neural network 'model' choices
+    # TODO: try DenseNET / SqeezeNet / NASNet / CapsNet / etc instead
+    serial_model = MyCNN_Keras2(X.shape, nb_classes=len(class_names), nb_layers=nb_layers)
+    #serial_model = old_model(X.shape, nb_classes=len(class_names), nb_layers=nb_layers)
 
-    #if gpu_count <= 1:
-    #    serial_model = MyCNN_Keras2(X, nb_classes=len(class_names), nb_layers=nb_layers)
-    #else:
-    #    with tf.device("/cpu:0"):
-    serial_model = MyCNN_Keras2(X, nb_classes=len(class_names), nb_layers=nb_layers)
-    #serial_model = old_model(X, nb_classes=len(class_names), nb_layers=nb_layers)
+
+    # serial_model = freeze_layers(serial_model, train_last = 3) # Doesn't speed up by more than factor of 2.
 
     # Initialize weights using checkpoint if it exists.
     if (try_checkpoint):
@@ -150,17 +189,23 @@ def make_model(X, class_names, nb_layers=4, try_checkpoint=True,
             else:
                 print('No weights file detected, so starting from scratch.')
 
+    gpu_count = get_available_gpus()
     if (gpu_count >= 2):
         print(" Parallel run on",gpu_count,"GPUs")
         model = make_parallel(serial_model, gpu_count=gpu_count)
     else:
         model = serial_model
 
-    opt = 'adadelta' # Adam(lr = 0.00001)  #
-    loss = 'categorical_crossentropy'
+    opt = 'adadelta' # Adam(lr = 0.00001)  # So far, adadelta seems to work the best of things I've tried
     metrics = ['accuracy']
+
+    if (multi_tag):     # multi_tag means more than one class can be 'chosen' at a time; default is 'only one' (ideally)
+        loss = 'binary_crossentropy'
+    else:
+        loss = 'categorical_crossentropy'
+
     model.compile(loss=loss, optimizer=opt, metrics=metrics)
-    #serial_model.compile(loss=loss, optimizer=opt, metrics=metrics)
+    #serial_model.compile(loss=loss, optimizer=opt, metrics=metrics)     # Breaks everything if you compile both.  Why??
 
     if (not quiet):
         print("Summary of serial model (duplicated across",gpu_count,"GPUs):")

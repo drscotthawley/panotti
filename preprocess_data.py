@@ -48,7 +48,7 @@ def convert_one_file(printevery, class_index, class_files, nb_classes, classname
     if (0 == file_index % printevery) or (file_index+1 == len(class_files)):
         print("\r Processing class ",class_index+1,"/",nb_classes,": \'",classname,
             "\', File ",file_index+1,"/", n_load,": ",audio_path,"                                 ",
-            sep="",end="\r")
+            sep="",end="\r", flush=True)
 
     sr = None
     if (resample is not None):
@@ -57,7 +57,7 @@ def convert_one_file(printevery, class_index, class_files, nb_classes, classname
     try:
         signal, sr = librosa.load(audio_path, mono=mono, sr=sr)
     except NoBackendError as e:
-        print("\n*** ERROR: Could not open audio file {}".format(path),"\n")
+        print("\n*** ERROR: Could not open audio file {}".format(path),"\n",flush=True)
         raise e
 
     shape = get_canonical_shape(signal)
@@ -89,7 +89,7 @@ def convert_one_file(printevery, class_index, class_files, nb_classes, classname
             im = Image.fromarray(arr).convert('RGB')  # Note this limits # audio channels to no more than 3!
         im.save(outfile)
     else:
-        print("Error: unrecognized output format '",out_format,"'",sep="")
+        print("Error: unrecognized output format '",out_format,"'",sep="",flush=True)
         assert(False)
     return
 
@@ -98,23 +98,23 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
     sequential=False, mono=False, dur=None, clean=False, out_format='npy'):
 
     if (resample is not None):
-        print(" Will be resampling at",resample,"Hz")
+        print(" Will be resampling at",resample,"Hz",flush=True)
 
     if (True == already_split):
-        print(" Data is already split into Train & Test")
+        print(" Data is already split into Train & Test",flush=True)
         class_names = get_class_names(path=inpath+"Train/")   # get the names of the subdirectories
         sampleset_subdirs = ["Train/","Test/"]
     else:
-        print(" Will be imposing 80-20 (Train-Test) split")
+        print(" Will be imposing 80-20 (Train-Test) split",flush=True)
         class_names = get_class_names(path=inpath)   # get the names of the subdirectories
         sampleset_subdirs = ["./"]
 
     if (True == sequential):
-        print(" Sequential ordering")
+        print(" Sequential ordering",flush=True)
     else:
-        print(" Shuffling ordering")
+        print(" Shuffling ordering",flush=True)
 
-    print(" Finding max shape...")
+    print(" Finding max shape...",flush=True)
     max_shape = find_max_shape(inpath, mono=mono, sr=resample, dur=dur, clean=clean)
     print(''' Padding all files with silence to fit shape:
               Channels : {}
@@ -122,7 +122,7 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
           '''.format(max_shape[0], max_shape[1]))
 
     nb_classes = len(class_names)
-    print(" class_names = ",class_names)
+    print(" class_names = ",class_names,flush=True)
 
     train_outpath = outpath+"Train/"
     test_outpath = outpath+"Test/"
@@ -132,7 +132,7 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
         os.mkdir( test_outpath );
 
     cpu_count = os.cpu_count()
-    print("",cpu_count,"CPUs detected: Parallel execution across",cpu_count,"CPUs")
+    print("",cpu_count,"CPUs detected: Parallel execution across",cpu_count,"CPUs",flush=True)
 
     for subdir in sampleset_subdirs: #non-class subdirs of Samples (in case already split)
 

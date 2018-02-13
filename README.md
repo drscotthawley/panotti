@@ -16,6 +16,8 @@ This is a version of the [audio-classifier-keras-cnn](https://github.com/drscott
 * optional: sox ("Sound eXchange": command-line utility for examples/binaural. Install via "apt-get install sox")
 * optional: pygame (for exampes/headgames.py)
 
+...And probably: Mac OS X or Linux. (Windows users: I have no experience to offer you.)
+
 ## Demo
 I'm not shipping this with any audio but you can generate some for the 'fake binaural' example (requires sox):
 

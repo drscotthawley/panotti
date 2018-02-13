@@ -65,7 +65,7 @@ def eval_network(weights_file="weights.hdf5", classpath="Preproc/Test/", batch_s
     n_classes = len(class_names)
 
     # Load the model
-    model, serial_model = make_model(X_test, class_names, weights_file=weights_file, missing_weights_fatal=True)
+    model, serial_model = setup_model(X_test, class_names, weights_file=weights_file, missing_weights_fatal=True)
     model.summary()
 
     num_pred = X_test.shape[0]

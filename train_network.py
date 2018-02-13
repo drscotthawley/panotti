@@ -29,7 +29,7 @@ def train_network(weights_file="weights.hdf5", classpath="Preproc/Train/", epoch
     X_train, Y_train, paths_train, class_names = build_dataset(path=classpath, batch_size=batch_size)
 
     # Instantiate the model
-    model, serial_model = make_model(X_train, class_names, weights_file=weights_file)
+    model, serial_model = setup_model(X_train, class_names, weights_file=weights_file)
 
     save_best_only = (val_split > 1e-6)
     checkpointer = MultiGPUModelCheckpoint(filepath=weights_file, verbose=1, save_best_only=save_best_only,

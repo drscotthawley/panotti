@@ -25,10 +25,11 @@ from kivy.core.window import Window
 from kivy.uix.popup import Popup
 from kivy.uix.floatlayout import FloatLayout
 from kivy.garden.filebrowser import FileBrowser
+from kivy.config import Config
 from settingsjson import settings_json
 import time
 import subprocess
-
+from scp_upload import scp_upload
 from functools import partial
 import os
 
@@ -220,16 +221,35 @@ class SHPanels(TabbedPanel):
     def preproc(self,barname):
         cmd = 'cd '+self.samplesDir+'/..; rm -rf Preproc'
         p = subprocess.call(cmd, shell=True)                       # blocking
-        cmd = 'cd '+self.samplesDir+'/..; '+PANOTTI_HOME+'/preprocess_data.py -s -m --dur=4.0 -r=44100 | tee log.txt '
+        cmd = 'cd '+self.samplesDir+'/..; '+PANOTTI_HOME+'/preprocess_data.py '
+        if App.get_running_app().config.get('example', 'sequential'):
+            cmd += '-s '
+        if App.get_running_app().config.get('example', 'mono'):
+            cmd += '-m '
+        cmd += '--dur='+App.get_running_app().config.get('example','duration')+' '
+        cmd += '-r='+App.get_running_app().config.get('example','sampleRate')+' '
+        cmd += ' | tee log.txt '
+        print('Executing command: ',cmd)
         p = subprocess.Popen(cmd, shell=True)                      # non-blocking
         self.preproc_sched = Clock.schedule_interval(partial(self.monitor_preproc_progress,self.samplesDir+'/../Preproc', p), 0.2)
-
         return
 
-    def actual_upload(self, archive_file):   #
-        return
+    # status messages , progress and such
+    def my_upload_callback(self, filename, size, sent):
+        percent = int( float(sent)/float(size)*100)
+        prog_str = 'Uploading progress: '+str(percent)+' %'
+        self.ids['statusMsg'].text = prog_str
+        barname = 'uploadProgress'
+        self.ids[barname].value = percent
 
-    def monitor_archive_progress(self, archive_file, orig_size, p, dt):   # archive as in zip or tar
+    # TODO: decide on API for file transfer. for now, we use scp
+    def actual_upload(self, archive_file):
+        server = App.get_running_app().config.get('example', 'server')
+        username = App.get_running_app().config.get('example', 'username')
+        scp_upload( src_blob=self.samplesDir+'/../Preproc.tar.gz', options={'hostname': server, 'username': username}, progress = self.my_upload_callback )
+
+    # Watches progress of packaging the Preproc/ directory.
+    def monitor_archive_progress(self, archive_file, orig_size, p, dt):
         #TODO: ok this is sloppy but estimating compression is 'hard'; we generally get around a factor of 10 in compression
         if (os.path.isfile(archive_file) ):  # problem with this is, zip uses an alternate name until it's finished
             archive_size = os.path.getsize(archive_file)
@@ -241,12 +261,12 @@ class SHPanels(TabbedPanel):
         if (p.poll() is not None):           # archive process completed
             self.archive_sched.cancel()
             self.ids['statusMsg'].text = "Now Uploading..."
-            barname = 'uploadProgress'
-            self.progress_events[barname] = Clock.schedule_interval(partial(self.next,barname), 1/50)
+            self.actual_upload(archive_file)
         return
 
-    def upload(self,barname):           # this actually initiates "archiving" (zip/tar), and THEN uploads
-        self.ready_to_upload = (self.ids['preprocProgress'].value >= 100) and (self.ids['serverProgress'].value >= 100)
+    # this actually initiates "archiving" (zip/tar) first, and THEN uploads
+    def upload(self,barname):
+        self.ready_to_upload = True#(self.ids['preprocProgress'].value >= 100) and (self.ids['serverProgress'].value >= 100)
         if (self.ready_to_upload):
             archive_file = self.samplesDir+'/../Preproc.tar.gz'
             self.ids['statusMsg'].text = "Archiving Preproc...)"
@@ -256,13 +276,14 @@ class SHPanels(TabbedPanel):
             self.archive_sched = Clock.schedule_interval(partial(self.monitor_archive_progress, archive_file, orig_size, p), 0.2)
         return # self.start_prog_anim(barname)
 
+    # TODO: does this get used?  copied code from elsewhere
     def open(self, path, filename):
         with open(os.path.join(path, filename[0])) as f:
             print(f.read())
 
+    # TODO: does this get used?  copied code from elsewhere
     def selected(self, filename):
         print("selected: %s" % filename[0])
-
 
     def dismiss_popup(self):
         self._popup.dismiss()
@@ -273,9 +294,10 @@ class SHPanels(TabbedPanel):
                             size_hint=(0.9, 0.9))
         self._popup.open()
 
+    # either by drag-dropping or by using popup dialog, we now have one or more filenames/directory names
     def got_filenames(self, filenames):
         if (self.current_tab == self.ids['trainPanel']):
-            self.samplesDir = str(filenames[0])
+            self.samplesDir = filenames[0]
             self.ids['samplesDir'].text = self.samplesDir
             self.totalClips = count_files(self.samplesDir)
             text = "Contains "+str(self.totalClips)+" files"
@@ -287,16 +309,20 @@ class SHPanels(TabbedPanel):
                 self.ids['sortFilesDisplay'].text += str(name) + '\n'
         return
 
+    # this doesn't actually load file, it's just the result of the file selector gui
     def load(self, path, filenames):
         self.dismiss_popup()
         if (filenames):
-            self.got_filenames(filenames)
+            self.got_filenames(filenames )
 
+    # sometimes you just want a widget id (name)
     def get_id(self,  instance):
         for id, widget in instance.parent.ids.items():
             if widget.__self__ == instance:
                 return id
 
+
+    # if you drag & drop multiple files, it treats them as separate events; but we want one list o files
     def consolidate_drops(self, file_path):
         now = time.time()
         tolerance = 1
@@ -309,22 +335,22 @@ class SHPanels(TabbedPanel):
         self.last_drop_time = now
         print("Sort!  self.sortFileList = ",self.sortFileList)
 
-
-    def _on_file_drop(self, window, file_path):   # this fires multiple times if multiple files are dropped
+    # this fires multiple times if multiple files are dropped
+    def _on_file_drop(self, window, file_path):
         if (self.current_tab == self.ids['trainPanel']):
-            print("Train!")
-            self.samplesDir = file_path.decode('UTF-8')
-            self.got_filenames()
+            self.got_filenames( [file_path.decode('UTF-8')] )
         elif (self.current_tab == self.ids['sortPanel']):
             self.consolidate_drops(file_path.decode('UTF-8'))
 
+    # programaticaly change to tab_state (i.e. tab instance)
     def change_to_tab(self, tab_state, t):
         self.switch_to(tab_state)
 
+    # opens settings view, returns to tab you were on before
     def my_handle_settings(self):
         tab_state = self.current_tab            # remember what tab we're on
         App.get_running_app().open_settings()
-        Clock.schedule_once(partial(self.change_to_tab, tab_state), 0.1)  # switch back to orig.tabs
+        Clock.schedule_once(partial(self.change_to_tab, tab_state), 0.1)  # switch back to orig tab after a slight delay
 
 
 
@@ -336,11 +362,19 @@ class SortingHatApp(App):
 
     def build_config(self, config):
         config.setdefaults('example', {
-            'boolexample': True,
-            'numericexample': 10,
-            'optionsexample': 'option2',
-            'stringexample': 'some_string',
-            'pathexample': '/some/path'})
+            'server': 'lecun',
+            'username': os.getlogin(),      # default is that they have the same username on both local & server
+            'sshKeyPath': '~/.ssh/id_rsa.pub',
+            'mono': True,
+            'sequential': True,
+            'duration': 3,
+            'sampleRate': 44100,
+            'weightsOption': 'Default',
+            'server': 'lecun.belmont.edu',
+            'sshKeyPath': '~/.ssh/id_rsa.pub',
+            'epochs': 20,
+            'val_split': 0.1,
+            })
 
     def build_settings(self, settings):
         settings.add_json_panel('Settings',

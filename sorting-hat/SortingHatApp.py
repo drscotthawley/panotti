@@ -10,7 +10,7 @@ TODO:
     - Should create a "ButtonBarAndStatus" class that can be reused multiple times
 
 Requirements:
-    $ pip install kivy kivy-garden scandir functools
+    $ pip install kivy kivy-garden scandir functools paramiko git+https://github.com/jbardin/scp.py.git
     $ garden install filebrowser
 ============
 '''
@@ -154,7 +154,7 @@ Builder.load_string("""
     CustomWidthTabb:
         id: settingsPanel
         text: 'Settings'
-        on_press: app.open_settings()
+        on_press: SH_widget.my_handle_settings()
         Button:
             text: 'Press to go to Train'
             on_release: root.switch_to(trainPanel)
@@ -318,9 +318,14 @@ class SHPanels(TabbedPanel):
         elif (self.current_tab == self.ids['sortPanel']):
             self.consolidate_drops(file_path.decode('UTF-8'))
 
+    def change_to_tab(self, tab_state, t):
+        self.switch_to(tab_state)
+
     def my_handle_settings(self):
-        root.open_settings()
-        self.ids['SH_widget'].switch_to(self.ids['trainPanel'])
+        tab_state = self.current_tab            # remember what tab we're on
+        App.get_running_app().open_settings()
+        Clock.schedule_once(partial(self.change_to_tab, tab_state), 0.1)  # switch back to orig.tabs
+
 
 
 class SortingHatApp(App):

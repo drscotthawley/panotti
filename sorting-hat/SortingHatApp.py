@@ -29,11 +29,14 @@ from kivy.config import Config
 from settingsjson import settings_json
 import time
 import subprocess
+import threading
 from scp_upload import scp_upload
 from functools import partial
 import os
 
 PANOTTI_HOME = os.path.expanduser("~")+"/panotti"
+PREPROC_DIR = "Preproc"
+ARCHIVE_NAME = PREPROC_DIR+".tar.gz"
 
 def count_files(folder):
     total = 0
@@ -50,6 +53,47 @@ def folder_size(path):   # get bytes
         elif entry.is_dir():
             total += folder_size(entry.path)
     return total
+
+
+# check to see if a thread is still running, and if not call completion_callback
+def check_for_completion(thread, completion_callback):
+    if not thread.isAlive():
+        completion_callback()
+        return False    # cancels any Kivy scheduler
+    return True         # keep the scheduler going
+
+# Generic utility to run things ('threads' or 'processes' in the background)
+#   routine can be a string (for shell command) or another python function
+#   progress and on_completion should point to other functions (i.e. are callbacks)
+
+#  Note: the progress callback is actually what's going to handle the completion_callback
+def spawn_background(routine, progress_callback=None, progress_interval=0.1, completion_callback=None):
+
+    def runProcInThread(cmd, on_completion):  # cmd is a string for a shell command
+        proc = subprocess.Popen(cmd, shell=True)
+        proc.wait()
+        if (completion_callback is not None):
+            completion_callback()
+        return
+
+    # spawn the process/thread
+    if isinstance(routine, str):  # routine is a string, spawn a shell command
+        thread = threading.Thread(target=runProcInThread, args=(routine) )
+    elif callable(routine):       # routine is another Python function
+        thread = threading.Thread(target=routine)
+    else:
+        print(" Error: routine = ",routine," is neither string nor callable")
+        return
+    thread.start()
+
+    # schedule a Kivy clock event to repeatedly call the progress-query routine (& check for completion of process)
+    if (progress_callback is not None):
+        progress_clock_sched = Clock.schedule_interval(partial(progress_callback, thread, completion_callback), progress_interval)
+    elif (completion_callback is not None):          # no progress per se, but still wait on completion
+        completion_clock_sched = Clock.schedule_interval(partial(check_for_completion, thread, completion_callback), progress_interval)
+
+    return
+
 
 Builder.load_string("""
 #:import expanduser os.path.expanduser
@@ -109,7 +153,7 @@ Builder.load_string("""
                 Button:
                     text: "Train"
                     id: trainButton
-                    on_release: root.start_prog_anim('trainProgress')
+                    on_release: root.train('trainProgress')
                 ProgressBar:
                     id: trainProgress
                     value: 0
@@ -134,6 +178,7 @@ Builder.load_string("""
                         text: 'No Files selected'
             Button:
                 text: 'Go!'
+                on_release: root.test_spawn()
     CustomWidthTabb:
         text: 'About'
         BoxLayout:
@@ -180,6 +225,9 @@ class LoadDialog(FloatLayout):
     load = ObjectProperty(None)
     cancel = ObjectProperty(None)
 
+
+#============== Main Widget =================
+
 class SHPanels(TabbedPanel):
     def __init__(self, **kwargs):
         super(SHPanels, self).__init__(**kwargs)
@@ -187,11 +235,45 @@ class SHPanels(TabbedPanel):
         Window.bind(on_dropfile=self._on_file_drop)
         self.last_drop_time = time.time()-10000
         self.progress_events = {}
+        self.samplesDir = ''
+        self.parentDir = ''
         self.ready_to_preproc = False
         self.ready_to_upload = False
         self.ready_to_train = False
 
-    server_progress = ObjectProperty()
+    #----------- Testing stuffffff-------
+        self.count = 0
+        self.maxval = 0
+
+    def finished(self):
+        print("\n\n*** Finished.")
+
+    def progress_display(self, thread, completion_callback, t):
+        percent = int((self.count+1) / self.maxval * 100)
+        print("\rProgress: percent = ",percent,"% ",end="")
+
+        # Test for completion:
+        if not thread.isAlive():         # if the thread has completed
+            if (percent >=100):          # Yay
+                completion_callback()    # go on to the final state
+            else:
+                print("\nError: Process died but progress < 100% ")
+            return False                 # Either way, cancel the Kivy clock schedule
+
+        return True                      # keep the progress-checker rolling
+
+    def count_to(self, maxval):   # this will be our test process
+        print("Begin the counting, maxval = ",maxval)
+        self.maxval = maxval
+        for self.count in range(maxval):
+            pass
+
+    def test_spawn(self):
+        spawn_background(partial(self.count_to,50000000), progress_callback=self.progress_display, completion_callback=self.finished)
+        #time.sleep(10)  # just keep the program from terminating so we can see what happens!
+
+    #-------------- Generic Utilities ------------
+
     def next(self, barname, dt):         # little updater for 'fake' progress bar updates
         self.ids[barname].value += 1
         if (self.ids[barname].value >= 100):
@@ -211,70 +293,7 @@ class SHPanels(TabbedPanel):
             self.progress_events[barname] = Clock.schedule_interval(partial(self.next,barname), 1/50)
 
 
-    def monitor_preproc_progress(self, folder, p, dt):
-        files_processed = count_files(folder)      # Folder should be Preproc
-        self.ids['preprocProgress'].value = max(3, int(files_processed / self.totalClips * 100))
-        self.ids['statusMsg'].text = str(files_processed)+"/"+str(self.totalClips)+" files processed"
-        if (self.ids['preprocProgress'].value >= 99.4) or (p.poll() is not None):
-            self.preproc_sched.cancel()
-
-    def preproc(self,barname):
-        cmd = 'cd '+self.samplesDir+'/..; rm -rf Preproc'
-        p = subprocess.call(cmd, shell=True)                       # blocking
-        cmd = 'cd '+self.samplesDir+'/..; '+PANOTTI_HOME+'/preprocess_data.py '
-        if App.get_running_app().config.get('example', 'sequential'):
-            cmd += '-s '
-        if App.get_running_app().config.get('example', 'mono'):
-            cmd += '-m '
-        cmd += '--dur='+App.get_running_app().config.get('example','duration')+' '
-        cmd += '-r='+App.get_running_app().config.get('example','sampleRate')+' '
-        cmd += ' | tee log.txt '
-        print('Executing command: ',cmd)
-        p = subprocess.Popen(cmd, shell=True)                      # non-blocking
-        self.preproc_sched = Clock.schedule_interval(partial(self.monitor_preproc_progress,self.samplesDir+'/../Preproc', p), 0.2)
-        return
-
-    # status messages , progress and such
-    def my_upload_callback(self, filename, size, sent):
-        percent = int( float(sent)/float(size)*100)
-        prog_str = 'Uploading progress: '+str(percent)+' %'
-        self.ids['statusMsg'].text = prog_str
-        barname = 'uploadProgress'
-        self.ids[barname].value = percent
-
-    # TODO: decide on API for file transfer. for now, we use scp
-    def actual_upload(self, archive_file):
-        server = App.get_running_app().config.get('example', 'server')
-        username = App.get_running_app().config.get('example', 'username')
-        scp_upload( src_blob=self.samplesDir+'/../Preproc.tar.gz', options={'hostname': server, 'username': username}, progress = self.my_upload_callback )
-
-    # Watches progress of packaging the Preproc/ directory.
-    def monitor_archive_progress(self, archive_file, orig_size, p, dt):
-        #TODO: ok this is sloppy but estimating compression is 'hard'; we generally get around a factor of 10 in compression
-        if (os.path.isfile(archive_file) ):  # problem with this is, zip uses an alternate name until it's finished
-            archive_size = os.path.getsize(archive_file)
-            est_comp_ratio = 10
-            est_size = orig_size/est_comp_ratio
-            percent = int(archive_size / est_size * 100)
-            self.ids['statusMsg'].text = "Archiving... "+str(percent)+" %"
-
-        if (p.poll() is not None):           # archive process completed
-            self.archive_sched.cancel()
-            self.ids['statusMsg'].text = "Now Uploading..."
-            self.actual_upload(archive_file)
-        return
-
-    # this actually initiates "archiving" (zip/tar) first, and THEN uploads
-    def upload(self,barname):
-        self.ready_to_upload = True#(self.ids['preprocProgress'].value >= 100) and (self.ids['serverProgress'].value >= 100)
-        if (self.ready_to_upload):
-            archive_file = self.samplesDir+'/../Preproc.tar.gz'
-            self.ids['statusMsg'].text = "Archiving Preproc...)"
-            cmd = 'cd '+self.samplesDir+'/..; rm -f '+archive_file+';  tar cfz '+archive_file+' Preproc/'
-            p = subprocess.Popen(cmd, shell=True)
-            orig_size = folder_size(self.samplesDir+'/../Preproc')
-            self.archive_sched = Clock.schedule_interval(partial(self.monitor_archive_progress, archive_file, orig_size, p), 0.2)
-        return # self.start_prog_anim(barname)
+    #-------------- File/Folder Selection --------------
 
     # TODO: does this get used?  copied code from elsewhere
     def open(self, path, filename):
@@ -298,6 +317,7 @@ class SHPanels(TabbedPanel):
     def got_filenames(self, filenames):
         if (self.current_tab == self.ids['trainPanel']):
             self.samplesDir = filenames[0]
+            self.parentDir = self.samplesDir+'/../'
             self.ids['samplesDir'].text = self.samplesDir
             self.totalClips = count_files(self.samplesDir)
             text = "Contains "+str(self.totalClips)+" files"
@@ -342,6 +362,116 @@ class SHPanels(TabbedPanel):
         elif (self.current_tab == self.ids['sortPanel']):
             self.consolidate_drops(file_path.decode('UTF-8'))
 
+
+    #-------------- Preprocessing --------------
+
+    def monitor_preproc_progress(self, folder, p, dt):
+        files_processed = count_files(folder)      # Folder should be Preproc
+        self.ids['preprocProgress'].value = max(3, int(files_processed / self.totalClips * 100))
+        self.ids['statusMsg'].text = str(files_processed)+"/"+str(self.totalClips)+" files processed"
+        if (self.ids['preprocProgress'].value >= 99.4) or (p.poll() is not None):
+            self.preproc_sched.cancel()
+
+    def preproc(self,barname):
+        if ('' != self.samplesDir) and ('' != self.parentDir):
+            self.ready_to_preproc = True
+        if self.ready_to_preproc:
+            cmd = 'cd '+self.parentDir+'; rm -rf '+PREPROC_DIR
+            p = subprocess.call(cmd, shell=True)                       # blocking
+            cmd = 'cd '+self.parentDir+'; '+PANOTTI_HOME+'/preprocess_data.py '
+            if App.get_running_app().config.get('example', 'sequential'):
+                cmd += '-s '
+            if App.get_running_app().config.get('example', 'mono'):
+                cmd += '-m '
+            cmd += '--dur='+App.get_running_app().config.get('example','duration')+' '
+            cmd += '-r='+App.get_running_app().config.get('example','sampleRate')+' '
+            cmd += ' | tee log.txt '
+            print('Executing command: ',cmd)
+            p = subprocess.Popen(cmd, shell=True)                      # non-blocking
+            self.preproc_sched = Clock.schedule_interval(partial(self.monitor_preproc_progress,self.parentDir+PREPROC_DIR, p), 0.2)
+        return
+
+
+    #-------------- Uploading --------------
+
+    # status messages , progress and such
+    def my_upload_callback(self, filename, size, sent):
+        percent = int( float(sent)/float(size)*100)
+        prog_str = 'Uploading progress: '+str(percent)+' %'
+        self.ids['statusMsg'].text = prog_str
+        barname = 'uploadProgress'
+        self.ids[barname].value = percent
+
+    # TODO: decide on API for file transfer. for now, we use scp
+    def actual_upload(self, archive_path):
+        self.server = App.get_running_app().config.get('example', 'server')
+        self.username = App.get_running_app().config.get('example', 'username')
+        scp_upload( src_blob=archive_path, options={'hostname': self.server, 'username': self.username}, progress=self.my_upload_callback )
+
+    # Watches progress of packaging the Preproc/ directory.
+    def monitor_archive_progress(self, archive_file, orig_size, p, dt):
+        #TODO: ok this is sloppy but estimating compression is 'hard'; we generally get around a factor of 10 in compression
+        if (os.path.isfile(archive_file) ):  # problem with this is, zip uses an alternate name until it's finished
+            archive_size = os.path.getsize(archive_file)
+            est_comp_ratio = 10
+            est_size = orig_size/est_comp_ratio
+            percent = int(archive_size / est_size * 100)
+            self.ids['statusMsg'].text = "Archiving... "+str(percent)+" %"
+
+        if (p.poll() is not None):           # archive process completed
+            self.archive_sched.cancel()
+            self.ids['statusMsg'].text = "Now Uploading..."
+            self.actual_upload(archive_file)
+        return
+
+    # this actually initiates "archiving" (zip/tar) first, and THEN uploads
+    def upload(self,barname):
+        archive_path =  self.parentDir+ARCHIVE_NAME
+        self.ready_to_upload = os.path.exists(archive_path)#(self.ids['preprocProgress'].value >= 100) and (self.ids['serverProgress'].value >= 100)
+        if (self.ready_to_upload):
+            self.ids['statusMsg'].text = "Archiving Preproc...)"
+            cmd = 'cd '+self.parentDir+'; rm -f '+archive_path+';  tar cfz '+archive_path+' Preproc/'
+            p = subprocess.Popen(cmd, shell=True)
+            orig_size = folder_size(self.parentDir+'Preproc')
+            self.archive_sched = Clock.schedule_interval(partial(self.monitor_archive_progress, archive_path, orig_size, p), 0.2)
+        return # self.start_prog_anim(barname)
+
+
+    #-------------- Training --------------
+
+    def train(self, barname, method='ssh'):
+        self.ready_to_train = True# (self.ids['uploadProgress'].value >= 100) and (self.ready_to_upload)
+        if self.ready_to_train:
+            self.server = App.get_running_app().config.get('example', 'server')
+            self.username = App.get_running_app().config.get('example', 'username')
+
+            if ('ssh' == method):
+            # remote code execution via SSH server. could use sorting-hat HTTP server instead
+                cmd = 'ssh -t '+self.username+'@'+self.server+' "tar xvfz Preproc.tar.gz;'
+                cmd += ' ~/panotti/train_network.py '
+                cmd += '--epochs='+App.get_running_app().config.get('example','epochs')
+                cmd += ' --val='+App.get_running_app().config.get('example','val_split')
+                cmd += ' | tee log.txt"'
+                print("Executing command cmd = [",cmd,"]")
+
+                p = subprocess.call(cmd, shell=True)   # blocking  TODO: make non-blocking
+                print("\n\nDownloading weights...")
+                if ('' == self.parentDir):
+                    dst = "~/Downloads/"
+                else:
+                    dst = self.parentDir
+                cmd = "scp "+self.username+'@'+self.server+':weights.hdf5 '+dst
+                print("Executing command cmd = [",cmd,"]")
+                p = subprocess.call(cmd, shell=True)   # blocking. TODO: make non-blocking
+
+            elif ('http' == method):
+                print("Yea, haven't done that yet")
+            else:
+                print("Error: Unrecognized API method '",method,"''")
+
+
+    #-------------- Settings --------------
+
     # programaticaly change to tab_state (i.e. tab instance)
     def change_to_tab(self, tab_state, t):
         self.switch_to(tab_state)
@@ -352,7 +482,7 @@ class SHPanels(TabbedPanel):
         App.get_running_app().open_settings()
         Clock.schedule_once(partial(self.change_to_tab, tab_state), 0.1)  # switch back to orig tab after a slight delay
 
-
+#============== End of main widget ==============
 
 class SortingHatApp(App):
     def build(self):
@@ -384,7 +514,6 @@ class SortingHatApp(App):
     def on_config_change(self, config, section,
                          key, value):
         print(config, section, key, value)
-
 
 
 if __name__ == '__main__':

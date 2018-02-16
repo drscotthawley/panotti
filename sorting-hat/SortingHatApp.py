@@ -386,6 +386,7 @@ class SHPanels(TabbedPanel):
                 cmd += '-m '
             cmd += '--dur='+App.get_running_app().config.get('example','duration')+' '
             cmd += '-r='+App.get_running_app().config.get('example','sampleRate')+' '
+            cmd += '--format='+App.get_running_app().config.get('example','specFileFormat')+' '
             cmd += ' | tee log.txt '
             print('Executing command: ',cmd)
             spawn(cmd, progress=partial(self.monitor_preproc,self.parentDir+PREPROC_DIR), interval=0.2, completion=None )
@@ -470,9 +471,10 @@ class SHPanels(TabbedPanel):
             if ('ssh' == method):
             # remote code execution via SSH server. could use sorting-hat HTTP server instead
                 cmd = 'ssh -t '+self.username+'@'+self.server+' "tar xvfz Preproc.tar.gz;'
-                cmd += ' ~/panotti/train_network.py '
-                cmd += '--epochs='+App.get_running_app().config.get('example','epochs')
+                cmd += ' ~/panotti/train_network.py'
+                cmd += ' --epochs='+App.get_running_app().config.get('example','epochs')
                 cmd += ' --val='+App.get_running_app().config.get('example','val_split')
+                cmd += ' --format='+App.get_running_app().config.get('example','specFileFormat')
                 cmd += ' | tee log.txt"'
                 print("Executing command cmd = [",cmd,"]")
 
@@ -513,6 +515,7 @@ class SortingHatApp(App):
             'sequential': True,
             'duration': 3,
             'sampleRate': 44100,
+            'specFileFormat': 'png',   # note, color png supports only up to 4 channels of audio, npy is arbitrarily many, jpeg is lossy
             'weightsOption': 'Default',
             'server': 'lecun.belmont.edu',
             'sshKeyPath': '~/.ssh/id_rsa.pub',

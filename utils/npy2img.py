@@ -37,9 +37,8 @@ def convert_one_file(file_list, out_format, mono, file_index):
 
 
 def main(args):
-
+    # farm out the list of files across multiple cpus
     file_indices = tuple( range(len(args.file)) )
-
     cpu_count = os.cpu_count()
     pool = Pool(cpu_count)
     pool.map(partial(convert_one_file, args.file, args.format, args.mono), file_indices)
@@ -48,8 +47,8 @@ def main(args):
 
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser(description='Convert numpy array file to img format')
-    parser.add_argument('--format', help="format of output image (jpeg, png, etc). Default = jpeg", type=str, default='jpeg')
+    parser = argparse.ArgumentParser(description='Convert numpy array file to image format')
+    parser.add_argument('--format', help="format of output image (jpeg, png, etc). Default = png", type=str, default='png')
     parser.add_argument("-m", "--mono", help="Use greyscale encoding for mono files (otherwise use RGB)",action="store_true")
     parser.add_argument('file', help=".npy file(s) to convert", nargs='+')
     args = parser.parse_args()

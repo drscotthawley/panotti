@@ -122,7 +122,7 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
           '''.format(max_shape[0], max_shape[1]))
 
     nb_classes = len(class_names)
-    print(" class_names = ",class_names,flush=True)
+    print(len(class_names),"classes.  class_names = ",class_names,flush=True)
 
     train_outpath = outpath+"Train/"
     test_outpath = outpath+"Test/"
@@ -166,7 +166,8 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
                 pool = Pool(cpu_count)
                 pool.map(partial(convert_one_file, printevery, class_index, class_files, nb_classes, classname, n_load, dirname,
                     resample, mono, already_split, n_train, outpath, subdir, max_shape, clean, out_format), file_indices)
-
+                pool.close() # shut down the pool
+                
     print("")    # at the very end, newline
     return
 

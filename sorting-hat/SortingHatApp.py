@@ -56,17 +56,17 @@ def folder_size(path):   # get bytes
 
 
 # check to see if a thread is still running, and if not call completion
-def check_for_completion(thread, completion):
+def check_for_completion(thread, completion, t):
     if not thread.isAlive():
         completion()
         return False    # cancels any Kivy scheduler
     return True         # keep the scheduler going
 
-# Generic utility to run things ('threads' or 'processes' in the background)
+# Generic utility to run things ('threads' or 'processes') in the background
 #   routine can be a string (for shell command) or another python function
 #   progress and oompletion are callbacks, i.e. should point to other functions
 #  Note: the progress callback is actually what handles the completion
-def spawn_background(routine, progress=None, interval=0.1, completion=None):
+def spawn(routine, progress=None, interval=0.1, completion=None):
 
     def runProcInThread(cmd, completion_in_thread):  # cmd is a string for a shell command, usually completion_in_thread will be None
         proc = subprocess.Popen(cmd, shell=True)
@@ -77,13 +77,12 @@ def spawn_background(routine, progress=None, interval=0.1, completion=None):
 
     # spawn the process/thread
     if isinstance(routine, str):  # routine is a string, spawn a shell command
-        print("this one's a string")
         thread = threading.Thread(target=runProcInThread, args=(routine,None) )
     elif callable(routine):       # routine is another Python function
         thread = threading.Thread(target=routine)
     else:
         print(" Error: routine = ",routine," is neither string nor callable")
-        return
+        return           # Leave
     thread.start()
 
     # schedule a Kivy clock event to repeatedly call the progress-query routine (& check for completion of process)
@@ -257,10 +256,10 @@ class SHPanels(TabbedPanel):
             pass
 
     def test_spawn(self):
-        spawn_background(partial(self.count_to,50000000), progress=self.progress_display, completion=self.finished)
+        spawn(partial(self.count_to,50000000), progress=self.progress_display, completion=self.finished)
         #time.sleep(10)  # just keep the program from terminating so we can see what happens!
 
-    #-------------- Generic Utilities ------------
+    #-------------- Generic Utilities for testing / mock-up  ------------
     def done_fake(self):
         self.ids['statusMsg'].text = "Server is up and running."
 
@@ -276,7 +275,7 @@ class SHPanels(TabbedPanel):
             return False                 # Either way, cancel the Kivy clock schedule
         return True                      # keep the progress-checker rolling
 
-    def count_slow(self,maxval=100):     # some 'fake' task for testing purposes
+    def count_up(self,maxval=100):     # some 'fake' task for testing purposes
         self.maxval = maxval
         for self.count in range(maxval):
             time.sleep(0.02)
@@ -291,7 +290,7 @@ class SHPanels(TabbedPanel):
             (('uploadProgress' == barname) and self.ready_to_upload) or
             (('trainProgress' == barname) and self.ready_to_train) ):
             #self.ids[barname].value = 0
-            spawn_background(self.count_slow, progress=partial(self.progress_display,barname),interval=0.1, completion=self.done_fake)
+            spawn(self.count_up, progress=partial(self.progress_display,barname),interval=0.1, completion=self.done_fake)
 
 
     #-------------- File/Folder Selection --------------
@@ -366,7 +365,7 @@ class SHPanels(TabbedPanel):
 
     #-------------- Preprocessing --------------
 
-    def monitor_preproc_progress(self, folder, thread, completion, dt):
+    def monitor_preproc(self, folder, thread, completion, dt):
         files_processed = count_files(folder)      # Folder should be Preproc
         self.ids['preprocProgress'].value = max(3, int(files_processed / self.totalClips * 100))
         self.ids['statusMsg'].text = str(files_processed)+"/"+str(self.totalClips)+" files processed"
@@ -389,17 +388,16 @@ class SHPanels(TabbedPanel):
             cmd += '-r='+App.get_running_app().config.get('example','sampleRate')+' '
             cmd += ' | tee log.txt '
             print('Executing command: ',cmd)
-            spawn_background(cmd, progress=partial(self.monitor_preproc_progress,self.parentDir+PREPROC_DIR), interval=0.2, completion=None )
-            #p = subprocess.Popen(cmd, shell=True)                      # non-blocking
-            #self.preproc_sched = Clock.schedule_interval(partial(self.monitor_preproc_progress,self.parentDir+PREPROC_DIR, p), 0.2)
+            spawn(cmd, progress=partial(self.monitor_preproc,self.parentDir+PREPROC_DIR), interval=0.2, completion=None )
         return
 
 
     #-------------- Uploading --------------
+    # for progress purposes, we'll split the percentage 40/60 between archive & upload
 
     # status messages , progress and such
     def my_upload_callback(self, filename, size, sent):
-        percent = int( float(sent)/float(size)*100)
+        percent = 60 + int( float(sent)/float(size)*60)
         prog_str = 'Uploading progress: '+str(percent)+' %'
         self.ids['statusMsg'].text = prog_str
         barname = 'uploadProgress'
@@ -412,35 +410,56 @@ class SHPanels(TabbedPanel):
         scp_upload( src_blob=archive_path, options={'hostname': self.server, 'username': self.username}, progress=self.my_upload_callback )
 
     # Watches progress of packaging the Preproc/ directory.
-    def monitor_archive_progress(self, archive_file, orig_size, p, dt):
+    def monitor_archive(self, archive_file, orig_size, thread, completion, dt):
         #TODO: ok this is sloppy but estimating compression is 'hard'; we generally get around a factor of 10 in compression
         if (os.path.isfile(archive_file) ):  # problem with this is, zip uses an alternate name until it's finished
             archive_size = os.path.getsize(archive_file)
-            est_comp_ratio = 10
+            est_comp_ratio = 8
             est_size = orig_size/est_comp_ratio
-            percent = int(archive_size / est_size * 100)
+            percent = int(archive_size / est_size * 50)
             self.ids['statusMsg'].text = "Archiving... "+str(percent)+" %"
 
-        if (p.poll() is not None):           # archive process completed
-            self.archive_sched.cancel()
+        if not thread.isAlive():           # archive process completed
+            if (percent < 99):
+                print("  Warning: archive finished with less than 100% complete")
             self.ids['statusMsg'].text = "Now Uploading..."
-            self.actual_upload(archive_file)
+            completion()
+            return False            # cancels scheduler
         return
 
     # this actually initiates "archiving" (zip/tar) first, and THEN uploads
     def upload(self,barname):
         archive_path =  self.parentDir+ARCHIVE_NAME
-        self.ready_to_upload = os.path.exists(archive_path)#(self.ids['preprocProgress'].value >= 100) and (self.ids['serverProgress'].value >= 100)
+        self.ready_to_upload = os.path.exists(archive_path) and (self.ids['preprocProgress'].value >= 100) and (self.ids['serverProgress'].value >= 100)
         if (self.ready_to_upload):
             self.ids['statusMsg'].text = "Archiving Preproc...)"
             cmd = 'cd '+self.parentDir+'; rm -f '+archive_path+';  tar cfz '+archive_path+' Preproc/'
-            p = subprocess.Popen(cmd, shell=True)
             orig_size = folder_size(self.parentDir+'Preproc')
-            self.archive_sched = Clock.schedule_interval(partial(self.monitor_archive_progress, archive_path, orig_size, p), 0.2)
-        return # self.start_prog_anim(barname)
+            spawn(cmd, progress=partial(self.monitor_archive,archive_path,orig_size), interval=0.2, completion=partial(self.actual_upload,archive_path) )
+        return
 
 
     #-------------- Training --------------
+    def train_is_complete(self):
+        self.ids['statusMsg'].text = 'Training is complete!'
+        return False    # cancel clock schedule
+
+    def download_weights(self):
+        print("\n\nDownloading weights...")
+        if ('' == self.parentDir):
+            dst = "~/Downloads/"
+        else:
+            dst = self.parentDir
+        cmd = "scp "+self.username+'@'+self.server+':weights.hdf5 '+dst
+        print("Executing command cmd = [",cmd,"]")
+        spawn(cmd, progress=None, completion=self.train_is_complete)
+        return
+
+    def train_progress(self,thread, completion, t):
+        if not thread.isAlive():
+            print("Train thread finished, calling completion (download weights?)...")
+            completion()
+            return False    # cancel schedule
 
     def train(self, barname, method='ssh'):
         self.ready_to_train = True# (self.ids['uploadProgress'].value >= 100) and (self.ready_to_upload)
@@ -457,16 +476,8 @@ class SHPanels(TabbedPanel):
                 cmd += ' | tee log.txt"'
                 print("Executing command cmd = [",cmd,"]")
 
-                p = subprocess.call(cmd, shell=True)   # blocking  TODO: make non-blocking
-                print("\n\nDownloading weights...")
-                if ('' == self.parentDir):
-                    dst = "~/Downloads/"
-                else:
-                    dst = self.parentDir
-                cmd = "scp "+self.username+'@'+self.server+':weights.hdf5 '+dst
-                print("Executing command cmd = [",cmd,"]")
-                p = subprocess.call(cmd, shell=True)   # blocking. TODO: make non-blocking
-
+                spawn(cmd, progress=self.train_progress, interval=1, completion=self.download_weights)
+                #p = subprocess.call(cmd, shell=True)   # blocking  TODO: make non-blocking
             elif ('http' == method):
                 print("Yea, haven't done that yet")
             else:

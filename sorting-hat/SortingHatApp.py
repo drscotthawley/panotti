@@ -55,30 +55,30 @@ def folder_size(path):   # get bytes
     return total
 
 
-# check to see if a thread is still running, and if not call completion_callback
-def check_for_completion(thread, completion_callback):
+# check to see if a thread is still running, and if not call completion
+def check_for_completion(thread, completion):
     if not thread.isAlive():
-        completion_callback()
+        completion()
         return False    # cancels any Kivy scheduler
     return True         # keep the scheduler going
 
 # Generic utility to run things ('threads' or 'processes' in the background)
 #   routine can be a string (for shell command) or another python function
-#   progress and on_completion should point to other functions (i.e. are callbacks)
+#   progress and oompletion are callbacks, i.e. should point to other functions
+#  Note: the progress callback is actually what handles the completion
+def spawn_background(routine, progress=None, interval=0.1, completion=None):
 
-#  Note: the progress callback is actually what's going to handle the completion_callback
-def spawn_background(routine, progress_callback=None, progress_interval=0.1, completion_callback=None):
-
-    def runProcInThread(cmd, on_completion):  # cmd is a string for a shell command
+    def runProcInThread(cmd, completion_in_thread):  # cmd is a string for a shell command, usually completion_in_thread will be None
         proc = subprocess.Popen(cmd, shell=True)
-        proc.wait()
-        if (completion_callback is not None):
-            completion_callback()
+        proc.wait()                          # make sure it's finished
+        if (completion_in_thread is not None):
+            completion_in_thread()
         return
 
     # spawn the process/thread
     if isinstance(routine, str):  # routine is a string, spawn a shell command
-        thread = threading.Thread(target=runProcInThread, args=(routine) )
+        print("this one's a string")
+        thread = threading.Thread(target=runProcInThread, args=(routine,None) )
     elif callable(routine):       # routine is another Python function
         thread = threading.Thread(target=routine)
     else:
@@ -87,10 +87,10 @@ def spawn_background(routine, progress_callback=None, progress_interval=0.1, com
     thread.start()
 
     # schedule a Kivy clock event to repeatedly call the progress-query routine (& check for completion of process)
-    if (progress_callback is not None):
-        progress_clock_sched = Clock.schedule_interval(partial(progress_callback, thread, completion_callback), progress_interval)
-    elif (completion_callback is not None):          # no progress per se, but still wait on completion
-        completion_clock_sched = Clock.schedule_interval(partial(check_for_completion, thread, completion_callback), progress_interval)
+    if (progress is not None):
+        progress_clock_sched = Clock.schedule_interval(partial(progress, thread, completion), interval)
+    elif (completion is not None):          # no progress per se, but still wait on completion
+        completion_clock_sched = Clock.schedule_interval(partial(check_for_completion, thread, completion), interval)
 
     return
 
@@ -248,19 +248,7 @@ class SHPanels(TabbedPanel):
     def finished(self):
         print("\n\n*** Finished.")
 
-    def progress_display(self, thread, completion_callback, t):
-        percent = int((self.count+1) / self.maxval * 100)
-        print("\rProgress: percent = ",percent,"% ",end="")
 
-        # Test for completion:
-        if not thread.isAlive():         # if the thread has completed
-            if (percent >=100):          # Yay
-                completion_callback()    # go on to the final state
-            else:
-                print("\nError: Process died but progress < 100% ")
-            return False                 # Either way, cancel the Kivy clock schedule
-
-        return True                      # keep the progress-checker rolling
 
     def count_to(self, maxval):   # this will be our test process
         print("Begin the counting, maxval = ",maxval)
@@ -269,17 +257,30 @@ class SHPanels(TabbedPanel):
             pass
 
     def test_spawn(self):
-        spawn_background(partial(self.count_to,50000000), progress_callback=self.progress_display, completion_callback=self.finished)
+        spawn_background(partial(self.count_to,50000000), progress=self.progress_display, completion=self.finished)
         #time.sleep(10)  # just keep the program from terminating so we can see what happens!
 
     #-------------- Generic Utilities ------------
+    def done_fake(self):
+        self.ids['statusMsg'].text = "Server is up and running."
 
-    def next(self, barname, dt):         # little updater for 'fake' progress bar updates
-        self.ids[barname].value += 1
-        if (self.ids[barname].value >= 100):
-            self.progress_events[barname].cancel()
-            if ('trainProgress' == barname):
-                self.ids['statusMsg'].text = "Downloading weights..."
+    def progress_display(self, barname, thread, completion, t):
+        percent = int((self.count+1) / self.maxval * 100)
+        self.ids[barname].value = percent
+        # Test for completion:
+        if not thread.isAlive():         # if the thread has completed
+            if (percent >=100):          # Yay
+                completion()    # go on to the final state
+            else:
+                print("\nError: Process died but progress < 100% ")
+            return False                 # Either way, cancel the Kivy clock schedule
+        return True                      # keep the progress-checker rolling
+
+    def count_slow(self,maxval=100):     # some 'fake' task for testing purposes
+        self.maxval = maxval
+        for self.count in range(maxval):
+            time.sleep(0.02)
+
 
     def start_prog_anim(self,barname):
         self.ready_to_preproc = ('No folder selected' != self.ids['samplesDir'].text)
@@ -289,8 +290,8 @@ class SHPanels(TabbedPanel):
             (('preprocProgress' == barname) and self.ready_to_preproc) or
             (('uploadProgress' == barname) and self.ready_to_upload) or
             (('trainProgress' == barname) and self.ready_to_train) ):
-            self.ids[barname].value = 0
-            self.progress_events[barname] = Clock.schedule_interval(partial(self.next,barname), 1/50)
+            #self.ids[barname].value = 0
+            spawn_background(self.count_slow, progress=partial(self.progress_display,barname),interval=0.1, completion=self.done_fake)
 
 
     #-------------- File/Folder Selection --------------
@@ -365,12 +366,13 @@ class SHPanels(TabbedPanel):
 
     #-------------- Preprocessing --------------
 
-    def monitor_preproc_progress(self, folder, p, dt):
+    def monitor_preproc_progress(self, folder, thread, completion, dt):
         files_processed = count_files(folder)      # Folder should be Preproc
         self.ids['preprocProgress'].value = max(3, int(files_processed / self.totalClips * 100))
         self.ids['statusMsg'].text = str(files_processed)+"/"+str(self.totalClips)+" files processed"
-        if (self.ids['preprocProgress'].value >= 99.4) or (p.poll() is not None):
-            self.preproc_sched.cancel()
+        if (self.ids['preprocProgress'].value >= 99.4):
+            return False              # this just cancels the clock schedule
+        return
 
     def preproc(self,barname):
         if ('' != self.samplesDir) and ('' != self.parentDir):
@@ -387,8 +389,9 @@ class SHPanels(TabbedPanel):
             cmd += '-r='+App.get_running_app().config.get('example','sampleRate')+' '
             cmd += ' | tee log.txt '
             print('Executing command: ',cmd)
-            p = subprocess.Popen(cmd, shell=True)                      # non-blocking
-            self.preproc_sched = Clock.schedule_interval(partial(self.monitor_preproc_progress,self.parentDir+PREPROC_DIR, p), 0.2)
+            spawn_background(cmd, progress=partial(self.monitor_preproc_progress,self.parentDir+PREPROC_DIR), interval=0.2, completion=None )
+            #p = subprocess.Popen(cmd, shell=True)                      # non-blocking
+            #self.preproc_sched = Clock.schedule_interval(partial(self.monitor_preproc_progress,self.parentDir+PREPROC_DIR, p), 0.2)
         return
 
 

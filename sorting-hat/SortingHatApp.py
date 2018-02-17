@@ -107,6 +107,16 @@ Builder.load_string("""
     padding: 20, 0
     size_hint_x: None
 
+<ButtonWithState@Button>
+    background_color: 0,0,0,0  # the last zero is the critical on, make invisible
+    canvas.before:
+        Color:
+            rgba: (.35,.35,.35,1) if self.state=='normal' else (0,.5,.0,1)  # visual feedback of press
+        RoundedRectangle:
+            size: (self.width -2.0, self.height - 2.0)
+            pos: ((self.right - self.width + 2.0),(self.top - self.height + 2.0))
+            radius: [3,]
+
 <SHPanels>:
     id: SH_widget
     size_hint: 1,1
@@ -119,7 +129,8 @@ Builder.load_string("""
             orientation: 'vertical'
             BoxLayout:
                 orientation: 'horizontal'
-                Button:
+                ButtonWithState:
+                    id: samplesButton
                     text: 'Select Samples Folder'
                     on_release: SH_widget.show_load()
                 Label:
@@ -128,7 +139,7 @@ Builder.load_string("""
                     size: self.texture_size
             BoxLayout:
                 orientation: 'horizontal'
-                Button:
+                ButtonWithState:
                     text: "Start Server"
                     id: serverButton
                     on_release: root.start_prog_anim('serverProgress')
@@ -137,7 +148,8 @@ Builder.load_string("""
                     value: 0
             BoxLayout:
                 orientation: 'horizontal'
-                Button:
+                ButtonWithState:
+                    id: preprocButton
                     text: "Create Spectrograms"
                     on_release: root.preproc('preprocProgress')
                 ProgressBar:
@@ -145,7 +157,7 @@ Builder.load_string("""
                     value: 0
             BoxLayout:
                 orientation: 'horizontal'
-                Button:
+                ButtonWithState:
                     text: "Upload"
                     id: uploadButton
                     on_release: root.upload('uploadProgress')
@@ -154,7 +166,7 @@ Builder.load_string("""
                     value: 0
             BoxLayout:
                 orientation: 'horizontal'
-                Button:
+                ButtonWithState:
                     text: "Train"
                     id: trainButton
                     on_release: root.train('trainProgress')
@@ -267,6 +279,7 @@ class SHPanels(TabbedPanel):
     #-------------- Generic Utilities for testing / mock-up  ------------
     def done_fake(self):
         self.ids['statusMsg'].text = "Server is up and running."
+        self.ids['serverButton'].state = "down"
 
     def progress_display(self, barname, thread, completion, t):
         percent = int((self.count+1) / self.maxval * 100)
@@ -283,7 +296,7 @@ class SHPanels(TabbedPanel):
     def count_up(self,maxval=100):     # some 'fake' task for testing purposes
         self.maxval = maxval
         for self.count in range(maxval):
-            time.sleep(0.02)
+            time.sleep(0.05)
 
 
     def start_prog_anim(self,barname):
@@ -327,6 +340,8 @@ class SHPanels(TabbedPanel):
             self.totalClips = count_files(self.samplesDir)
             text = "Contains "+str(self.totalClips)+" files"
             self.ids['statusMsg'].text = text
+            self.ids['samplesButton'].state = "down"
+
         elif (self.current_tab == self.ids['sortPanel']):
             self.sortFileList = filenames
             self.ids['sortFilesDisplay'].text  = ''
@@ -374,7 +389,8 @@ class SHPanels(TabbedPanel):
         files_processed = count_files(folder)      # Folder should be Preproc
         self.ids['preprocProgress'].value = max(3, int(files_processed / self.totalClips * 100))
         self.ids['statusMsg'].text = str(files_processed)+"/"+str(self.totalClips)+" files processed"
-        if (self.ids['preprocProgress'].value >= 99.4):
+        if (self.ids['preprocProgress'].value >= 99.4):  # finished
+            self.ids['preprocButton'].state = "down"
             return False              # this just cancels the clock schedule
         return
 
@@ -408,6 +424,9 @@ class SHPanels(TabbedPanel):
         self.ids['statusMsg'].text = prog_str
         barname = 'uploadProgress'
         self.ids[barname].value = percent
+        if (percent >= 99):  # Finished
+            self.ids['uploadButton'].state = "down"
+
 
     # TODO: decide on API for file transfer. for now, we use scp
     def actual_upload(self, archive_path):
@@ -527,7 +546,7 @@ class SortingHatApp(App):
             'sequential': True,
             'duration': 3,
             'sampleRate': 44100,
-            'specFileFormat': 'png',   # note, color png supports only up to 4 channels of audio, npy is arbitrarily many, jpeg is lossy
+            'specFileFormat': 'npz',   # note, color png supports only up to 4 channels of audio, npz is arbitrarily many, jpeg is lossy
             'weightsOption': 'Default',
             'server': 'lecun.belmont.edu',
             'sshKeyPath': '~/.ssh/id_rsa.pub',

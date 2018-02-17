@@ -71,6 +71,8 @@ def check_for_completion(thread, completion, t):
 def spawn(routine, progress=None, interval=0.1, completion=None):
 
     def runProcInThread(cmd, completion_in_thread):  # cmd is a string for a shell command, usually completion_in_thread will be None
+        #TODO: remove security risk associated w/ shell=True flag below, by parsing cmd string for pipe symbols and semicolons,
+        #          generating multiple subprocess calls as appropriate
         proc = subprocess.Popen(cmd, shell=True)     # SECURITY RISK: cmd better not have any semicolons you don't want in there. use whitelist_string on any user-supplied string inputs
         proc.wait()                          # make sure it's finished
         if (completion_in_thread is not None):
@@ -83,11 +85,12 @@ def spawn(routine, progress=None, interval=0.1, completion=None):
     elif callable(routine):       # routine is another Python function
         thread = threading.Thread(target=routine)
     else:
-        print(" Error: routine = ",routine," is neither string nor callable")
+        print("*** spawn: Error: routine = ",routine," is neither string nor callable. Exiting.")
         return           # Leave
     thread.start()
 
     # schedule a Kivy clock event to repeatedly call the progress-query routine (& check for completion of process)
+    #   Note: these routines that get called by Clock.schedule_interval need to return False in order to kill the schedule
     if (progress is not None):
         progress_clock_sched = Clock.schedule_interval(partial(progress, thread, completion), interval)
     elif (completion is not None):          # no progress per se, but still wait on completion
@@ -116,6 +119,17 @@ Builder.load_string("""
             size: (self.width -2.0, self.height - 2.0)
             pos: ((self.right - self.width + 2.0),(self.top - self.height + 2.0))
             radius: [3,]
+
+<TextInputLikeLabel@TextInput>
+    # Really I just want a Label that supports text highlighting.  But kivy doesn't have that, so...
+    background_color: (.35,.35,.35,1)
+    foreground_color: (1, 1, 1, 1)
+    readonly: True
+    ## kivy doesn't support centering text in a TextInput, only in a Label
+    # left, right   https://stackoverflow.com/questions/40477956/kivy-textinput-horizontal-and-vertical-align-centering-text
+    padding_x: [self.center[0] - self._get_text_width(max(self._lines, key=len), self.tab_width, self._label_cached) / 2.0,0] if self.text else [self.center[0], 0]
+    # top, bottom
+    padding_y: [self.height / 2.0 - (self.line_height / 2.0) * len(self._lines), 0]
 
 <SHPanels>:
     id: SH_widget
@@ -173,7 +187,7 @@ Builder.load_string("""
                 ProgressBar:
                     id: trainProgress
                     value: 0
-            Label:
+            TextInputLikeLabel:
                 id: statusMsg
                 text: "Status: Initial State"
                 center: self.parent.center
@@ -365,11 +379,12 @@ class SHPanels(TabbedPanel):
     # if you drag & drop multiple files, it treats them as separate events; but we want one list o files
     def consolidate_drops(self, file_path):
         now = time.time()
-        tolerance = 1
-        if (now - self.last_drop_time > tolerance):
+        tolerance = 1   # 1 second
+        if (now - self.last_drop_time > tolerance):         # this is (the beginning of) a completely new drag-drop event
+            #TODO: check to see if the file extension is '.hdf5'. If so, treat it like a weights file
             self.sortFileList=[file_path]
             self.ids['sortFilesDisplay'].text = file_path
-        else:
+        else:                                               # this is yet another in a series of events triggered by dragging multiple files
             self.sortFileList.append(file_path)
             self.ids['sortFilesDisplay'].text += '\n'+file_path
         self.last_drop_time = now
@@ -397,20 +412,21 @@ class SHPanels(TabbedPanel):
     def preproc(self,barname):
         if ('' != self.samplesDir) and ('' != self.parentDir):
             self.ready_to_preproc = True
-        if self.ready_to_preproc:
-            #cmd = 'cd '+self.parentDir+'; rm -rf '+PREPROC_DIR
-            #p = subprocess.call(cmd, shell=True)                       # blocking
-            cmd = 'cd '+self.parentDir+'; rm -rf '+PREPROC_DIR+'; '+PANOTTI_HOME+'/preprocess_data.py '
-            if App.get_running_app().config.get('example', 'sequential'):
-                cmd += '-s '
-            if App.get_running_app().config.get('example', 'mono'):
-                cmd += '-m '
-            cmd += '--dur='+App.get_running_app().config.get('example','duration')+' '
-            cmd += '-r='+App.get_running_app().config.get('example','sampleRate')+' '
-            cmd += '--format='+App.get_running_app().config.get('example','specFileFormat')+' '
-            cmd += ' | tee log.txt '
-            print('Executing command: ',cmd)
-            spawn(cmd, progress=partial(self.monitor_preproc,self.parentDir+PREPROC_DIR), interval=0.2, completion=None )
+        if not self.ready_to_preproc:
+            return
+        #cmd = 'cd '+self.parentDir+'; rm -rf '+PREPROC_DIR
+        #p = subprocess.call(cmd, shell=True)                       # blocking
+        cmd = 'cd '+self.parentDir+'; rm -rf '+PREPROC_DIR+' '+ARCHIVE_NAME+'; '+PANOTTI_HOME+'/preprocess_data.py '
+        if App.get_running_app().config.get('example', 'sequential'):
+            cmd += '-s '
+        if App.get_running_app().config.get('example', 'mono'):
+            cmd += '-m '
+        cmd += '--dur='+App.get_running_app().config.get('example','duration')+' '
+        cmd += '-r='+App.get_running_app().config.get('example','sampleRate')+' '
+        cmd += '--format='+App.get_running_app().config.get('example','specFileFormat')+' '
+        cmd += ' | tee log.txt '
+        print('Executing command: ',cmd)
+        spawn(cmd, progress=partial(self.monitor_preproc,self.parentDir+PREPROC_DIR), interval=0.2, completion=None )
         return
 
 
@@ -461,60 +477,68 @@ class SHPanels(TabbedPanel):
     # this actually initiates "archiving" (zip/tar) first, and THEN uploads
     def upload(self,barname):
         archive_path =  self.parentDir+PREPROC_DIR+'.tar.gz'
-        self.ready_to_upload = os.path.exists(self.parentDir+PREPROC_DIR) and (self.ids['serverProgress'].value >= 100) # and (self.ids['preprocProgress'].value >= 100)
-        if (self.ready_to_upload):
-            self.ids['statusMsg'].text = "Archiving "+PREPROC_DIR+"..."
-            cmd = 'cd '+self.parentDir+'; rm -f '+archive_path+';  tar cfz '+archive_path+' '+PREPROC_DIR
-            orig_size = folder_size(self.parentDir+PREPROC_DIR)
-            spawn(cmd, progress=partial(self.monitor_archive,archive_path,orig_size), interval=0.2, completion=partial(self.actual_upload,archive_path) )
-        else:
-            print("You aint' ready")
+        self.ready_to_upload = os.path.exists(self.parentDir+PREPROC_DIR) and (self.ids['serverProgress'].value >= 100) and (self.ids['preprocProgress'].value >= 100)
+        if not self.ready_to_upload:
+            return
+        self.ids['statusMsg'].text = "Archiving "+PREPROC_DIR+"..."
+        cmd = 'cd '+self.parentDir+'; rm -f '+archive_path+';  tar cfz '+archive_path+' '+PREPROC_DIR
+        orig_size = folder_size(self.parentDir+PREPROC_DIR)
+        spawn(cmd, progress=partial(self.monitor_archive,archive_path,orig_size), interval=0.2, completion=partial(self.actual_upload,archive_path) )
+
         return
 
 
     #-------------- Training --------------
-    def train_is_complete(self):
-        self.ids['statusMsg'].text = 'Training is complete!'
+    def train_is_complete(self,dst):
+        self.ids['statusMsg'].text = 'Training is complete!\nWeights file in '+dst
+        self.ids['trainProgress'].value = 100
+        self.ids['trainButton'].state = "down"
         return False    # cancel clock schedule
 
     def download_weights(self):
         print("\n\nDownloading weights...")
         if ('' == self.parentDir):
-            dst = "~/Downloads/"
+            dst = "~/Downloads"
         else:
             dst = self.parentDir
         cmd = "scp "+self.username+'@'+self.server+':weights.hdf5 '+dst
         print("Executing command cmd = [",cmd,"]")
-        spawn(cmd, progress=None, completion=self.train_is_complete)
+        spawn(cmd, progress=None, completion=partial(self.train_is_complete,dst))
         return
 
     def train_progress(self,thread, completion, t):
+        self.ids['trainProgress'].value = 10   # TODO: find a way to keep track of training. length of log file?
         if not thread.isAlive():
-            print("Train thread finished, calling completion (download weights?)...")
+            self.ids['statusMsg'].text = "Train thread finished.\nDownloading weights..."
             completion()
             return False    # cancel schedule
 
     def train(self, barname, method='ssh'):
-        self.ready_to_train = True# (self.ids['uploadProgress'].value >= 100) and (self.ready_to_upload)
-        if self.ready_to_train:
-            self.server = whitelist_string( App.get_running_app().config.get('example', 'server') )
-            self.username = whitelist_string( App.get_running_app().config.get('example', 'username') )
+        self.ready_to_train = (self.ids['uploadProgress'].value >= 100)
+        if not self.ready_to_train:
+            return
+        self.ids['statusMsg'].text = "Training, please wait..."
 
-            if ('ssh' == method):
-            # remote code execution via SSH server. could use sorting-hat HTTP server instead
-                cmd = 'ssh -t '+self.username+'@'+self.server+' "tar xvfz Preproc.tar.gz;'
-                cmd += ' ~/panotti/train_network.py'
-                cmd += ' --epochs='+App.get_running_app().config.get('example','epochs')
-                cmd += ' --val='+App.get_running_app().config.get('example','val_split')
-                cmd += ' | tee log.txt"'
-                print("Executing command cmd = [",cmd,"]")
+        self.server = whitelist_string( App.get_running_app().config.get('example', 'server') )
+        self.username = whitelist_string( App.get_running_app().config.get('example', 'username') )
 
-                spawn(cmd, progress=self.train_progress, interval=1, completion=self.download_weights)
-                #p = subprocess.call(cmd, shell=True)   # blocking  TODO: make non-blocking
-            elif ('http' == method):
-                print("Yea, haven't done that yet")
-            else:
-                print("Error: Unrecognized API method '",method,"''")
+        if ('ssh' == method):
+        # remote code execution via SSH server. could use sorting-hat HTTP server instead
+            cmd = 'ssh -t '+self.username+'@'+self.server+' "tar xvfz Preproc.tar.gz;'
+            if ('Random' == App.get_running_app().config.get('example', 'weightsOption')):
+                cmd+= ' rm -f weights.hdf5;'
+            cmd += ' ~/panotti/train_network.py'
+            cmd += ' --epochs='+App.get_running_app().config.get('example','epochs')
+            cmd += ' --val='+App.get_running_app().config.get('example','val_split')
+            cmd += ' | tee log.txt"'
+            print("Executing command cmd = [",cmd,"]")
+
+            spawn(cmd, progress=self.train_progress, interval=1, completion=self.download_weights)
+            #p = subprocess.call(cmd, shell=True)   # blocking  TODO: make non-blocking
+        elif ('http' == method):
+            print("Yea, haven't done that yet")
+        else:
+            print("Error: Unrecognized API method '",method,"''")
 
 
     #-------------- Settings --------------

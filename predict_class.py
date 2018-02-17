@@ -19,9 +19,17 @@ def get_canonical_shape(signal):
         return signal.shape
 
 
-def predict_one(signal, sr, model):# class_names, model)#, weights_file="weights.hdf5"):
+def predict_one(signal, sr, model, expected_melgram_shape):# class_names, model)#, weights_file="weights.hdf5"):
     X = make_layered_melgram(signal,sr)
-    #print("signal.shape, melgram_shape, sr = ",signal.shape, X.shape, sr)
+    print("signal.shape, melgram_shape, sr = ",signal.shape, X.shape, sr)
+
+    if (X.shape[1:] != expected_melgram_shape):   # resize if necessary, pad with zeros
+        Xnew = np.zeros([1]+list(expected_melgram_shape))
+        min1 = min(  Xnew.shape[1], X.shape[1]  )
+        min2 = min(  Xnew.shape[2], X.shape[2]  )
+        min3 = min(  Xnew.shape[3], X.shape[3]  )
+        Xnew[0,:min1,:min2,:min3] = X[0,:min1,:min2,:min3]  # truncate
+        X = Xnew
     return model.predict(X,batch_size=1,verbose=False)[0]
 
 
@@ -37,15 +45,17 @@ def main(args):
     if model is None:
         print("No weights file found.  Aborting")
         exit(1)
+
     #model.summary()
 
     #TODO: Keras load_models is spewing warnings about not having been compiled. we can ignore those,
-    #   how to turn them off?
+    #   how to turn them off?  Answer: can invoke with python -W ignore ...
 
     #class_names = get_class_names(args.classpath) # now encoding names in model weights file
     nb_classes = len(class_names)
     print(nb_classes," classes to choose from: ",class_names)
-
+    expected_melgram_shape = model.layers[0].input_shape[1:]
+    print("Expected_melgram_shape = ",expected_melgram_shape)
     file_count = 0
     json_file = open("data.json", "w")
     json_file.write('{\n"items":[')
@@ -60,21 +70,7 @@ def main(args):
 
             signal, sr = librosa.load(infile, mono=mono, sr=resample)
 
-            # resize / cut / pad signal to make expect length of clip (used in training)
-            padded_signal = signal
-            if (mono) and (dur is not None) and (resample is not None):
-                max_shape = [1, int(dur * resample)]
-                shape = get_canonical_shape(signal)
-                signal = np.reshape(signal, shape)
-                padded_signal = np.zeros(max_shape)
-                use_shape = max_shape[:]
-                use_shape[0] = min(shape[0], max_shape[0])
-                use_shape[1] = min(shape[1], max_shape[1])
-                padded_signal[:use_shape[0], :use_shape[1]] = signal[:use_shape[0], :use_shape[1]]
-
-            #print("padded_signal.shape = ",padded_signal.shape)
-
-            y_proba = predict_one(padded_signal, sr, model) # class_names, model, weights_file=args.weights)
+            y_proba = predict_one(signal, sr, model, expected_melgram_shape) # class_names, model, weights_file=args.weights)
 
             for i in range(nb_classes):
                 print( class_names[i],": ",y_proba[i],", ",end="",sep="")
@@ -99,8 +95,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="predicts which class file(s) belong(s) to")
     parser.add_argument('-w', '--weights', #nargs=1, type=argparse.FileType('r'),
         help='weights file in hdf5 format', default="weights.hdf5")
-    parser.add_argument('-c', '--classpath', #type=argparse.string,
-        help='directory with list of classes', default="Preproc/Test/")
+    #parser.add_argument('-c', '--classpath', #type=argparse.string, help='directory with list of classes', default="Preproc/Test/")
     parser.add_argument("-m", "--mono", help="convert input audio to mono",action="store_true")
     parser.add_argument("-r", "--resample", type=int, default=44100, help="convert input audio to mono")
     parser.add_argument('-d', "--dur",  type=float, default=None,   help='Max duration (in seconds) of each clip')

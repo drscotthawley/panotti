@@ -6,7 +6,7 @@ import numpy as np
 import librosa
 import os
 from os.path import isfile
-
+from imageio import imread, imwrite
 
 def listdir_nohidden(path):        # ignore hidden files
     for f in os.listdir(path):
@@ -30,12 +30,50 @@ def get_total_files(class_names, path="Preproc/Train/"):
         sum_total += n_files
     return sum_total
 
+def save_melgram(outfile, melgram, out_format='npz'):
+    channels = melgram.shape[1]
+    melgram = melgram.astype(np.float16)
+    if (('jpeg' == out_format) or ('png' == out_format)) and (channels <=4):
+        melgram = np.moveaxis(melgram, 1, 3).squeeze()      # we use the 'channels_first' in tensorflow, but images have channels_first. squeeze removes unit-size axes
+        melgram = np.flip(melgram, 0)    # flip spectrogram image right-side-up before saving, for viewing
+        #print("first melgram.shape = ",melgram.shape,end="")
+        if (2 == channels): # special case: 1=greyscale, 3=RGB, 4=RGBA, ..no 2.  so...?
+            # pad a channel of zeros (for blue) and you'll just be stuck with it forever. so channels will =3
+            # TODO: this is SLOWWW
+            b = np.zeros((melgram.shape[0], melgram.shape[1], 3))  # 3-channel array of zeros
+            b[:,:,:-1] = melgram                          # fill the zeros on the 1st 2 channels
+            imwrite(outfile, b, format=out_format)
+        else:
+            imwrite(outfile, melgram, format=out_format)
+    elif ('npy' == out_format):
+        np.save(outfile,melgram=melgram)
+    else:
+        np.savez_compressed(outfile,melgram=melgram)    # default is compressed npz file
+    return
+
+
+def load_melgram(file_path):
+    #auto-detect load method based on filename extension
+    name, extension = os.path.splitext(file_path)
+    if ('.npy' == extension):
+        melgram = np.load(file_path)
+    elif ('.npz' == extension):          # compressed npz file (preferred)
+        with np.load(file_path) as data:
+            melgram = data['melgram']
+    elif ('.png' == extension) or ('.jpeg' == extension):
+        arr = imread(file_path)
+        melgram = np.reshape(arr, (1,1,arr.shape[0],arr.shape[1]))  # convert 2-d image
+        melgram = np.flip(melgram, 0)     # we save images 'rightside up' but librosa internally presents them 'upside down'
+    else:
+        print("load_melgram: Error: unrecognized file extension '",extension,"' for file ",file_path,sep="")
+    return melgram
+
 
 def get_sample_dimensions(class_names, path='Preproc/Train/'):
     classname = class_names[0]
     audio_path = path + classname + '/'
     infilename = os.listdir(audio_path)[0]
-    melgram = np.load(audio_path+infilename)
+    melgram = load_melgram(audio_path+infilename)
     print("   get_sample_dimensions: "+infilename+": melgram.shape = ",melgram.shape)
     return melgram.shape
 
@@ -87,7 +125,7 @@ def make_melgram(mono_sig, sr):
 
 # turn multichannel audio as multiple melgram layers
 def make_layered_melgram(signal, sr):
-    if (signal.ndim == 1):
+    if (signal.ndim == 1):      # given the way the preprocessing code is  now, this may not get called
         signal = np.reshape( signal, (1,signal.shape[0]))
 
     # get mel-spectrogram for each channel, and layer them into multi-dim array
@@ -145,7 +183,8 @@ def build_dataset(path="Preproc/Train/", load_frac=1.0, batch_size=None):
                     "\', File ",idx2+1,"/", n_load,": ",audio_path,"                  ",
                     sep="",end="")
 
-            melgram = np.load(audio_path)
+            #auto-detect load method based on filename extension
+            melgram = load_melgram(audio_path)
             if (melgram.shape != mel_dims):
                 print("\n\n    ERROR: mel_dims = ",mel_dims,", melgram.shape = ",melgram.shape)
             X[load_count,:,:] = melgram

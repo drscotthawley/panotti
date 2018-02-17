@@ -6,7 +6,7 @@ import numpy as np
 import librosa
 import os
 from os.path import isfile
-#from PIL import Image
+from scipy.misc import imread, imsave
 
 def listdir_nohidden(path):        # ignore hidden files
     for f in os.listdir(path):
@@ -34,16 +34,12 @@ def get_total_files(class_names, path="Preproc/Train/"):
 def load_melgram(file_path, dtype=np.float32):
     #auto-detect load method based on filename extension
     name, extension = os.path.splitext(file_path)
-    print("load_melgram: file_path = ",file_path,", extension = ",extension)
     if ('.npy' == extension):
         melgram = np.load(audio_path)
     elif ('.png' == extension) or ('.jpeg' == extension):
-        img = Image.open(file_path)
-        arr = np.asarray(img, dtype=dtype)
-        channels = arr.shape  # PIL puts channels(=4 or 1) last, but we want channels first
-        print("  load_melgram: channels = ",channels)
+        arr = imread(file_path)
         melgram = np.reshape(arr, (1,1,arr.shape[0],arr.shape[1]))  # convert 2-d image
-        layers = np.flip(layers, 0)     # we save images 'rightside up' but librosa internally presents them 'upside down'
+        melgram = np.flip(melgram, 0)     # we save images 'rightside up' but librosa internally presents them 'upside down'
     else:
         print("load_melgram: Error: unrecognized file extension '",extension,"' for file ",file_path,sep="")
     return melgram

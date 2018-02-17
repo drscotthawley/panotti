@@ -398,7 +398,7 @@ class SHPanels(TabbedPanel):
 
     # status messages , progress and such
     def my_upload_callback(self, filename, size, sent):
-        percent = 60 + int( float(sent)/float(size)*60)
+        percent = min( 60 + int( float(sent)/float(size)*60),  100)
         prog_str = 'Uploading progress: '+str(percent)+' %'
         self.ids['statusMsg'].text = prog_str
         barname = 'uploadProgress'
@@ -417,7 +417,7 @@ class SHPanels(TabbedPanel):
             archive_size = os.path.getsize(archive_file)
             est_comp_ratio = 8
             est_size = orig_size/est_comp_ratio
-            percent = int(archive_size / est_size * 50)
+            percent = min( int(archive_size / est_size * 50), 100 )
             self.ids['statusMsg'].text = "Archiving... "+str(percent)+" %"
 
         if not thread.isAlive():           # archive process completed
@@ -474,7 +474,6 @@ class SHPanels(TabbedPanel):
                 cmd += ' ~/panotti/train_network.py'
                 cmd += ' --epochs='+App.get_running_app().config.get('example','epochs')
                 cmd += ' --val='+App.get_running_app().config.get('example','val_split')
-                cmd += ' --format='+App.get_running_app().config.get('example','specFileFormat')
                 cmd += ' | tee log.txt"'
                 print("Executing command cmd = [",cmd,"]")
 

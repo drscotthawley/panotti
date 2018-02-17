@@ -10,11 +10,12 @@ import librosa
 import librosa.display
 from audioread import NoBackendError
 import os
-from multiprocessing import Pool
 from PIL import Image
 from functools import partial
+from scipy.misc import imsave
+import multiprocessing as mp
 
-
+# this is either just the regular shape, or it returns a leading 1 for mono
 def get_canonical_shape(signal):
     if len(signal.shape) == 1:
         return (1, signal.shape[0])
@@ -60,15 +61,23 @@ def convert_one_file(printevery, class_index, class_files, nb_classes, classname
         print("\n*** ERROR: Could not open audio file {}".format(path),"\n",flush=True)
         raise e
 
-    shape = get_canonical_shape(signal)
-    signal = np.reshape(signal,shape)
-    padded_signal = np.zeros(max_shape)
+    # Reshape / pad so all output files have same shape
+    shape = get_canonical_shape(signal)     # either the signal shape or a leading one
+    #print("shape = ",shape,end="")
+    if (shape != signal.shape):             # this only evals to true for mono
+        signal = np.reshape(signal, shape)
+        #print("...reshaped mono so new shape = ",signal.shape, end="")
+    #print(",  max_shape = ",max_shape,end="")
+    padded_signal = np.zeros(max_shape)     # (previously found max_shape) allocate a long signal of zeros
     use_shape = list(max_shape[:])
     use_shape[0] = min( shape[0], max_shape[0] )
     use_shape[1] = min( shape[1], max_shape[1] )
+    #print(",  use_shape = ",use_shape)
     padded_signal[:use_shape[0], :use_shape[1]] = signal[:use_shape[0], :use_shape[1]]
 
+    #print("Making layers for filename ",infilename)
     layers = make_layered_melgram(padded_signal, sr)
+    #print("    Finished making layers for filename ",infilename)
 
     if not already_split:
         if (file_index >= n_train):
@@ -79,18 +88,22 @@ def convert_one_file(printevery, class_index, class_files, nb_classes, classname
         outsub = subdir
 
     outfile = outpath + outsub + classname + '/' + infilename+'.'+out_format
-    if ('npy' == out_format):
-        np.save(outfile,layers)
-    elif ('jpeg' == out_format) or ('png' == out_format):
-        arr = np.reshape(layers, (layers.shape[2],layers.shape[3]))
-        if (mono):
-            im = Image.fromarray(arr).convert('L')    # greyscale image
+    channels = layers.shape[1]
+
+    if (('jpeg' == out_format) or ('png' == out_format)) and (channels <=4):
+        layers = np.moveaxis(layers, 1, 3).squeeze()      # we use the 'channels_first' in tensorflow, but images have channels_first. squeeze removes unit-size axes
+        layers = np.flip(layers, 0)    # flip spectrogram image right-side-up before saving, for viewing
+        #print("first layers.shape = ",layers.shape,end="")
+        if (2 == channels): # special case: 1=greyscale, 3=RGB, 4=RGBA, ..no 2.  so...?
+            # pad a channel of zeros (for blue) and you'll just be stuck with it forever. so channels will =3
+            # TODO: this is SLOWWW
+            b = np.zeros((layers.shape[0], layers.shape[1], 3))  # 3-channel array of zeros
+            b[:,:,:-1] = layers                          # fill the zeros on the 1st 2 channels
+            imsave(outfile, b, format=out_format)
         else:
-            im = Image.fromarray(arr).convert('RGB')  # Note this limits # audio channels to no more than 3!
-        im.save(outfile)
+            imsave(outfile, layers, format=out_format)
     else:
-        print("Error: unrecognized output format '",out_format,"'",sep="",flush=True)
-        assert(False)
+        np.save(outfile,layers)
     return
 
 
@@ -122,7 +135,7 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
           '''.format(max_shape[0], max_shape[1]))
 
     nb_classes = len(class_names)
-    print(len(class_names),"classes.  class_names = ",class_names,flush=True)
+    print("",len(class_names),"classes.  class_names = ",class_names,flush=True)
 
     train_outpath = outpath+"Train/"
     test_outpath = outpath+"Test/"
@@ -156,22 +169,26 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
 
             printevery = 20
 
-            parallel = True
             file_indices = tuple( range(len(class_files)) )
+            #logger = multiprocessing.log_to_stderr()
+            #logger.setLevel(multiprocessing.SUBDEBUG)
+            parallel = True     # set to false for debugging. when parallel jobs crash, usually no error messages are given, the system just hangs
             if (not parallel):
                 for file_index in file_indices:    # loop over all files
-                    task=0
-                    convert_one_file(task, file_index, args)
+                    convert_one_file(printevery, class_index, class_files, nb_classes, classname, n_load, dirname,
+                        resample, mono, already_split, n_train, outpath, subdir, max_shape, clean, out_format, file_index)
             else:
-                pool = Pool(cpu_count)
+                pool = mp.Pool(cpu_count)
                 pool.map(partial(convert_one_file, printevery, class_index, class_files, nb_classes, classname, n_load, dirname,
                     resample, mono, already_split, n_train, outpath, subdir, max_shape, clean, out_format), file_indices)
                 pool.close() # shut down the pool
-                
+
+
     print("")    # at the very end, newline
     return
 
 if __name__ == '__main__':
+    import platform
     import argparse
     parser = argparse.ArgumentParser(description="preprocess_data: convert sames to python-friendly data format for faster loading")
     parser.add_argument("-a", "--already", help="data is already split into Test & Train (default is to add 80-20 split",action="store_true")
@@ -182,5 +199,14 @@ if __name__ == '__main__':
     parser.add_argument('-c', "--clean", help="Assume 'clean data'; Do not check to find max shape (faster)", action='store_true')
     parser.add_argument('-f','--format', help="format of output file (npy, jpeg, png, etc). Default = .npy", type=str, default='npy')
     args = parser.parse_args()
+    if (('Darwin' == platform.system()) and (not args.mono)):
+        # bug/feature in OS X that causes np.dot() to sometimes hang if multiprocessing is running
+        mp.set_start_method('forkserver', force=True)   # hopefully this here makes it never hang
+        print(" WARNING: Using stereo files w/ multiprocessing on OSX may cause the program to hang.")
+        print(" This is because of a mismatch between the way Python multiprocessing works and some Apple libraries")
+        print(" If it hangs, try running with mono only (-m) or the --clean option, or turn off parallelism")
+        print("  See https://github.com/numpy/numpy/issues/5752 for more on this.")
+        print("")
+
     preprocess_dataset(resample=args.resample, already_split=args.already, sequential=args.sequential, mono=args.mono,
         dur=args.dur, clean=args.clean, out_format=args.format)

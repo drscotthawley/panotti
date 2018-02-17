@@ -6,7 +6,7 @@ import numpy as np
 import librosa
 import os
 from os.path import isfile
-
+#from PIL import Image
 
 def listdir_nohidden(path):        # ignore hidden files
     for f in os.listdir(path):
@@ -31,11 +31,29 @@ def get_total_files(class_names, path="Preproc/Train/"):
     return sum_total
 
 
+def load_melgram(file_path, dtype=np.float32):
+    #auto-detect load method based on filename extension
+    name, extension = os.path.splitext(file_path)
+    print("load_melgram: file_path = ",file_path,", extension = ",extension)
+    if ('.npy' == extension):
+        melgram = np.load(audio_path)
+    elif ('.png' == extension) or ('.jpeg' == extension):
+        img = Image.open(file_path)
+        arr = np.asarray(img, dtype=dtype)
+        channels = arr.shape  # PIL puts channels(=4 or 1) last, but we want channels first
+        print("  load_melgram: channels = ",channels)
+        melgram = np.reshape(arr, (1,1,arr.shape[0],arr.shape[1]))  # convert 2-d image
+        layers = np.flip(layers, 0)     # we save images 'rightside up' but librosa internally presents them 'upside down'
+    else:
+        print("load_melgram: Error: unrecognized file extension '",extension,"' for file ",file_path,sep="")
+    return melgram
+
+
 def get_sample_dimensions(class_names, path='Preproc/Train/'):
     classname = class_names[0]
     audio_path = path + classname + '/'
     infilename = os.listdir(audio_path)[0]
-    melgram = np.load(audio_path+infilename)
+    melgram = load_melgram(audio_path+infilename)
     print("   get_sample_dimensions: "+infilename+": melgram.shape = ",melgram.shape)
     return melgram.shape
 
@@ -87,7 +105,7 @@ def make_melgram(mono_sig, sr):
 
 # turn multichannel audio as multiple melgram layers
 def make_layered_melgram(signal, sr):
-    if (signal.ndim == 1):
+    if (signal.ndim == 1):      # given the way the preprocessing code is  now, this may not get called
         signal = np.reshape( signal, (1,signal.shape[0]))
 
     # get mel-spectrogram for each channel, and layer them into multi-dim array
@@ -145,7 +163,8 @@ def build_dataset(path="Preproc/Train/", load_frac=1.0, batch_size=None):
                     "\', File ",idx2+1,"/", n_load,": ",audio_path,"                  ",
                     sep="",end="")
 
-            melgram = np.load(audio_path)
+            #auto-detect load method based on filename extension
+            melgram = load_melgram(audio_path)
             if (melgram.shape != mel_dims):
                 print("\n\n    ERROR: mel_dims = ",mel_dims,", melgram.shape = ",melgram.shape)
             X[load_count,:,:] = melgram

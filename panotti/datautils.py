@@ -32,6 +32,7 @@ def get_total_files(class_names, path="Preproc/Train/"):
 
 def save_melgram(outfile, melgram, out_format='npz'):
     channels = melgram.shape[1]
+    melgram = melgram.astype(np.float16)
     if (('jpeg' == out_format) or ('png' == out_format)) and (channels <=4):
         melgram = np.moveaxis(melgram, 1, 3).squeeze()      # we use the 'channels_first' in tensorflow, but images have channels_first. squeeze removes unit-size axes
         melgram = np.flip(melgram, 0)    # flip spectrogram image right-side-up before saving, for viewing

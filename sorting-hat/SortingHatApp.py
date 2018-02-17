@@ -33,10 +33,12 @@ import threading
 from scp_upload import scp_upload
 from functools import partial
 import os
+import re
 
 PANOTTI_HOME = os.path.expanduser("~")+"/panotti"
 PREPROC_DIR = "Preproc"
 ARCHIVE_NAME = PREPROC_DIR+".tar.gz"
+REMOTE_RUN_DIR = "~/SortingHatRuns"
 
 def count_files(folder):
     total = 0
@@ -69,7 +71,7 @@ def check_for_completion(thread, completion, t):
 def spawn(routine, progress=None, interval=0.1, completion=None):
 
     def runProcInThread(cmd, completion_in_thread):  # cmd is a string for a shell command, usually completion_in_thread will be None
-        proc = subprocess.Popen(cmd, shell=True)
+        proc = subprocess.Popen(cmd, shell=True)     # SECURITY RISK: cmd better not have any semicolons you don't want in there. use whitelist_string on any user-supplied string inputs
         proc.wait()                          # make sure it's finished
         if (completion_in_thread is not None):
             completion_in_thread()
@@ -93,6 +95,9 @@ def spawn(routine, progress=None, interval=0.1, completion=None):
 
     return
 
+def whitelist_string(string):
+    string = re.sub('[^a-zA-Z\d\ ]|( ){2,}','-',string )
+    return string
 
 Builder.load_string("""
 #:import expanduser os.path.expanduser
@@ -377,9 +382,9 @@ class SHPanels(TabbedPanel):
         if ('' != self.samplesDir) and ('' != self.parentDir):
             self.ready_to_preproc = True
         if self.ready_to_preproc:
-            cmd = 'cd '+self.parentDir+'; rm -rf '+PREPROC_DIR
-            p = subprocess.call(cmd, shell=True)                       # blocking
-            cmd = 'cd '+self.parentDir+'; '+PANOTTI_HOME+'/preprocess_data.py '
+            #cmd = 'cd '+self.parentDir+'; rm -rf '+PREPROC_DIR
+            #p = subprocess.call(cmd, shell=True)                       # blocking
+            cmd = 'cd '+self.parentDir+'; rm -rf '+PREPROC_DIR+'; '+PANOTTI_HOME+'/preprocess_data.py '
             if App.get_running_app().config.get('example', 'sequential'):
                 cmd += '-s '
             if App.get_running_app().config.get('example', 'mono'):
@@ -406,18 +411,24 @@ class SHPanels(TabbedPanel):
 
     # TODO: decide on API for file transfer. for now, we use scp
     def actual_upload(self, archive_path):
-        self.server = App.get_running_app().config.get('example', 'server')
-        self.username = App.get_running_app().config.get('example', 'username')
+        self.server = whitelist_string( App.get_running_app().config.get('example', 'server') )
+        self.username = whitelist_string( App.get_running_app().config.get('example', 'username') )
         scp_upload( src_blob=archive_path, options={'hostname': self.server, 'username': self.username}, progress=self.my_upload_callback )
 
     # Watches progress of packaging the Preproc/ directory.
     def monitor_archive(self, archive_file, orig_size, thread, completion, dt):
         #TODO: ok this is sloppy but estimating compression is 'hard'; we generally get around a factor of 10 in compression
+        percent = 0
         if (os.path.isfile(archive_file) ):  # problem with this is, zip uses an alternate name until it's finished
-            archive_size = os.path.getsize(archive_file)
+            '''archive_size = os.path.getsize(archive_file)
             est_comp_ratio = 8
             est_size = orig_size/est_comp_ratio
-            percent = min( int(archive_size / est_size * 50), 100 )
+            percent = min( int(archive_size / est_size * 50), 100 )'''
+            cmd = "cd "+self.parentDir+"; tar -tvf "+ARCHIVE_NAME+" | wc | awk '{print $1}'"  # get the number of files in the archive
+            tar_check = subprocess.check_output(cmd, shell=True)
+            files_processed = int(tar_check)
+            files_to_be_processed = count_files(self.parentDir+PREPROC_DIR)
+            percent = int( files_processed / files_to_be_processed * 100)
             self.ids['statusMsg'].text = "Archiving... "+str(percent)+" %"
 
         if not thread.isAlive():           # archive process completed
@@ -430,13 +441,15 @@ class SHPanels(TabbedPanel):
 
     # this actually initiates "archiving" (zip/tar) first, and THEN uploads
     def upload(self,barname):
-        archive_path =  self.parentDir+ARCHIVE_NAME
-        self.ready_to_upload = os.path.exists(archive_path) and (self.ids['preprocProgress'].value >= 100) and (self.ids['serverProgress'].value >= 100)
+        archive_path =  self.parentDir+PREPROC_DIR+'.tar.gz'
+        self.ready_to_upload = os.path.exists(self.parentDir+PREPROC_DIR) and (self.ids['serverProgress'].value >= 100) # and (self.ids['preprocProgress'].value >= 100)
         if (self.ready_to_upload):
-            self.ids['statusMsg'].text = "Archiving Preproc...)"
-            cmd = 'cd '+self.parentDir+'; rm -f '+archive_path+';  tar cfz '+archive_path+' Preproc/'
-            orig_size = folder_size(self.parentDir+'Preproc')
+            self.ids['statusMsg'].text = "Archiving "+PREPROC_DIR+"..."
+            cmd = 'cd '+self.parentDir+'; rm -f '+archive_path+';  tar cfz '+archive_path+' '+PREPROC_DIR
+            orig_size = folder_size(self.parentDir+PREPROC_DIR)
             spawn(cmd, progress=partial(self.monitor_archive,archive_path,orig_size), interval=0.2, completion=partial(self.actual_upload,archive_path) )
+        else:
+            print("You aint' ready")
         return
 
 
@@ -465,8 +478,8 @@ class SHPanels(TabbedPanel):
     def train(self, barname, method='ssh'):
         self.ready_to_train = True# (self.ids['uploadProgress'].value >= 100) and (self.ready_to_upload)
         if self.ready_to_train:
-            self.server = App.get_running_app().config.get('example', 'server')
-            self.username = App.get_running_app().config.get('example', 'username')
+            self.server = whitelist_string( App.get_running_app().config.get('example', 'server') )
+            self.username = whitelist_string( App.get_running_app().config.get('example', 'username') )
 
             if ('ssh' == method):
             # remote code execution via SSH server. could use sorting-hat HTTP server instead

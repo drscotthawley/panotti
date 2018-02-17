@@ -6,7 +6,7 @@ import numpy as np
 import librosa
 import os
 from os.path import isfile
-from scipy.misc import imread, imsave
+from imageio import imread, imwrite
 
 def listdir_nohidden(path):        # ignore hidden files
     for f in os.listdir(path):
@@ -30,12 +30,35 @@ def get_total_files(class_names, path="Preproc/Train/"):
         sum_total += n_files
     return sum_total
 
+def save_melgram(outfile, melgram, out_format='npz'):
+    channels = melgram.shape[1]
+    if (('jpeg' == out_format) or ('png' == out_format)) and (channels <=4):
+        melgram = np.moveaxis(melgram, 1, 3).squeeze()      # we use the 'channels_first' in tensorflow, but images have channels_first. squeeze removes unit-size axes
+        melgram = np.flip(melgram, 0)    # flip spectrogram image right-side-up before saving, for viewing
+        #print("first melgram.shape = ",melgram.shape,end="")
+        if (2 == channels): # special case: 1=greyscale, 3=RGB, 4=RGBA, ..no 2.  so...?
+            # pad a channel of zeros (for blue) and you'll just be stuck with it forever. so channels will =3
+            # TODO: this is SLOWWW
+            b = np.zeros((melgram.shape[0], melgram.shape[1], 3))  # 3-channel array of zeros
+            b[:,:,:-1] = melgram                          # fill the zeros on the 1st 2 channels
+            imwrite(outfile, b, format=out_format)
+        else:
+            imwrite(outfile, melgram, format=out_format)
+    elif ('npy' == out_format):
+        np.save(outfile,melgram=melgram)
+    else:
+        np.savez_compressed(outfile,melgram=melgram)    # default is compressed npz file
+    return
 
-def load_melgram(file_path, dtype=np.float32):
+
+def load_melgram(file_path):
     #auto-detect load method based on filename extension
     name, extension = os.path.splitext(file_path)
     if ('.npy' == extension):
-        melgram = np.load(audio_path)
+        melgram = np.load(file_path)
+    elif ('.npz' == extension):          # compressed npz file (preferred)
+        with np.load(file_path) as data:
+            melgram = data['melgram']
     elif ('.png' == extension) or ('.jpeg' == extension):
         arr = imread(file_path)
         melgram = np.reshape(arr, (1,1,arr.shape[0],arr.shape[1]))  # convert 2-d image

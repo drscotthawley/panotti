@@ -13,12 +13,11 @@
 # ...'course, alternatively we could just let ../preprocess_data.py save as jpegs
 #  and enable ../panotti/datautils.py, etc to read them.
 
-from PIL import Image
 import os
 from multiprocessing import Pool
 import numpy as np
 from functools import partial
-
+from scipy.misc import imsave
 
 def convert_one_file(file_list, out_format, mono, file_index):
     infile = file_list[file_index]
@@ -26,13 +25,16 @@ def convert_one_file(file_list, out_format, mono, file_index):
         outfile = infile+"."+out_format
         print("    Operating on file",infile,", converting to ",outfile)
         arr = np.load(infile)
-        arr = np.reshape(arr, (arr.shape[2],arr.shape[3]))
-        print('arr.shape = ',arr.shape)
-        if (mono):
-            im = Image.fromarray(arr).convert('L')
+        #arr = np.reshape(arr, (arr.shape[2],arr.shape[3]))
+        arr = np.moveaxis(arr, 1, 3).squeeze()      # we use the 'channels_first' in tensorflow, but images have channels_first. squeeze removes unit-size axes
+        arr = np.flip(arr, 0)    # flip spectrogram image right-side-up before saving, for viewing
+        if (2 == channels): # special case: 1=greyscale, 3=RGB, 4=RGBA, ..no 2.  so...?
+            # pad a channel of zeros (for blue) and you'll just be stuck with it forever. so channels will =3
+            b = np.zeros((arr.shape[0], layers.shape[1], 3))  # 3-channel array of zeros
+            b[:,:,:-1] = arr                          # fill the zeros on the 1st 2 channels
+            imsave(outfile, b, format=out_format)
         else:
-            im = Image.fromarray(arr).convert('RGB')
-        im.save(outfile, quality=90)
+            imsave(outfile, arr, format=out_format)
     return
 
 

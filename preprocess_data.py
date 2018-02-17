@@ -88,6 +88,8 @@ def convert_one_file(printevery, class_index, class_files, nb_classes, classname
         outsub = subdir
 
     outfile = outpath + outsub + classname + '/' + infilename+'.'+out_format
+    save_melgram(outfile, layers, out_format=out_format)
+    '''
     channels = layers.shape[1]
 
     if (('jpeg' == out_format) or ('png' == out_format)) and (channels <=4):
@@ -104,7 +106,9 @@ def convert_one_file(printevery, class_index, class_files, nb_classes, classname
             imsave(outfile, layers, format=out_format)
     else:
         np.save(outfile,layers)
+    '''
     return
+
 
 
 def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0.8, resample=None, already_split=False,
@@ -197,7 +201,7 @@ if __name__ == '__main__':
     parser.add_argument("-r", "--resample", type=int, default=44100, help="convert input audio to mono")
     parser.add_argument('-d', "--dur",  type=float, default=None,   help='Max duration (in seconds) of each clip')
     parser.add_argument('-c', "--clean", help="Assume 'clean data'; Do not check to find max shape (faster)", action='store_true')
-    parser.add_argument('-f','--format', help="format of output file (npy, jpeg, png, etc). Default = .npy", type=str, default='npy')
+    parser.add_argument('-f','--format', help="format of output file (npy, jpeg, png, etc). Default = .npz", type=str, default='npz')
     args = parser.parse_args()
     if (('Darwin' == platform.system()) and (not args.mono)):
         # bug/feature in OS X that causes np.dot() to sometimes hang if multiprocessing is running

@@ -6,7 +6,7 @@ import numpy as np
 import librosa
 import os
 from os.path import isfile
-from scipy.misc import imread, imsave
+from imageio import imread
 
 def listdir_nohidden(path):        # ignore hidden files
     for f in os.listdir(path):

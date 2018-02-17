@@ -5,18 +5,34 @@
 This is a version of the [audio-classifier-keras-cnn](https://github.com/drscotthawley/audio-classifier-keras-cnn) repo (which is a hack of **@keunwoochoi**'s compact_cnn code).  Difference with Panotti is, it has been generalized beyond mono audio, to include stereo or even more "channels."  And it's undergone many refinements.
 
 
-## Dependencies (see requirements.txt)
-* Python 3.5
-* numpy
-* keras
-* tensorflow 
-* librosa
-* matplotlib
-* h5py
-* optional: sox ("Sound eXchange": command-line utility for examples/binaural. Install via "apt-get install sox")
-* optional: pygame (for exampes/headgames.py)
+## Installation 
 
-...And probably: Mac OS X or Linux. (Windows users: I have no experience to offer you.)
+### Preface: Requirements
+Probably Mac OS X or Linux. (Windows users: I have no experience to offer you.)
+Not everything is required, here's a overview:
+
+* Required: 
+	* Python 3.5
+	* numpy
+	* keras
+	* tensorflow 
+	* librosa
+	* matplotlib
+	* h5py
+* Optional: 
+	* sox ("Sound eXchange": command-line utility for examples/binaural. Install via "apt-get install sox")
+	* pygame (for exampes/headgames.py)
+	* For sorting-hat: flask, kivy kivy-garden
+	
+...the `requirements.txt` file method is going to try to install both required and optional packages.
+
+### Installation:
+`git clone https://github.com/drscotthawley/panotti.git`
+
+`cd panotti`
+
+`pip install -r requirements.txt`
+
 
 ## Demo
 I'm not shipping this with any audio but you can generate some for the 'fake binaural' example (requires sox):

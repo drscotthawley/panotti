@@ -12,7 +12,7 @@ from audioread import NoBackendError
 import os
 from PIL import Image
 from functools import partial
-from scipy.misc import imsave
+from imageio import imwrite
 import multiprocessing as mp
 
 # this is either just the regular shape, or it returns a leading 1 for mono
@@ -101,9 +101,9 @@ def convert_one_file(printevery, class_index, class_files, nb_classes, classname
             # TODO: this is SLOWWW
             b = np.zeros((layers.shape[0], layers.shape[1], 3))  # 3-channel array of zeros
             b[:,:,:-1] = layers                          # fill the zeros on the 1st 2 channels
-            imsave(outfile, b, format=out_format)
+            imwrite(outfile, b, format=out_format)
         else:
-            imsave(outfile, layers, format=out_format)
+            imwrite(outfile, layers, format=out_format)
     else:
         np.save(outfile,layers)
     '''

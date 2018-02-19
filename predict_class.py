@@ -80,6 +80,7 @@ def main(args):
             if (idnum < numfiles-1):
                 outstr += ','
             json_file.write(outstr)
+            json_file.flush()     # keep json file up to date
         else:
             pass #print(" *** File",infile,"does not exist.  Skipping.")
         idnum += 1

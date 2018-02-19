@@ -5,8 +5,7 @@ SortingHatApp  - Desktop version of Sorting H.A.T. program.
 Author: Scott H. Hawley @drscotthawley
 
 TODO:
-    - Everything.  Still just a facade, doesn't actually work at all.
-    - Just learning Kivy as I write this. Still quite confused.
+    - Speed up sort. It's fast enough to run on a laptop, so we do, but it could be even faster. 
     - Should create a "ButtonBarAndStatus" class that can be reused multiple times
 
 Requirements:

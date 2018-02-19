@@ -9,8 +9,11 @@ TODO:
     - Should create a "ButtonBarAndStatus" class that can be reused multiple times
 
 Requirements:
+    - Panotti on both local machine ("laptop") and server
+    - Valid SSH login on server.  TODO: generalize from SSH to HTTP, or some AWS and/or Google Cloud APis
     $ pip install kivy kivy-garden scandir functools paramiko git+https://github.com/jbardin/scp.py.git
     $ garden install filebrowser
+
 ============
 '''
 

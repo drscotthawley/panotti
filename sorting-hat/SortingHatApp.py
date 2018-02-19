@@ -26,6 +26,8 @@ from kivy.uix.progressbar import ProgressBar
 from kivy.core.window import Window
 from kivy.uix.popup import Popup
 from kivy.uix.floatlayout import FloatLayout
+from kivy.uix.scrollview import ScrollView
+from kivy.properties import StringProperty
 from kivy.garden.filebrowser import FileBrowser
 from kivy.config import Config
 from settingsjson import settings_json
@@ -110,6 +112,16 @@ def whitelist_string(string):
 
 Builder.load_string("""
 #:import expanduser os.path.expanduser
+
+<ScrollableLabel>:  # https://github.com/kivy/kivy/wiki/Scrollable-Label
+    Label:
+        size_hint_y: None
+        height: self.texture_size[1]
+        text_size: self.width, None
+        text: root.text
+        halign: 'center'
+        valign: 'center'
+
 
 <CustomWidthTabb@TabbedPanelItem>
     width: self.texture_size[0]
@@ -212,11 +224,10 @@ Builder.load_string("""
                 Label:
                     id: sortWeightsLabel
                     text: 'No weights file'
-            ScrollView:
-                Label:
-                    id: sortFilesDisplay
-                    size_hint_y: 0.6
-                    text: 'Drag in files to be sorted'
+            ScrollableLabel:
+                size_hint_y: 0.9
+                id: sortFilesDisplay
+                text: '\\n\\n\\n\\n[Drag in files to be sorted]'
             BoxLayout:
                 size_hint_y: 0.3
                 ButtonWithState:
@@ -276,6 +287,9 @@ Builder.load_string("""
 class LoadDialog(FloatLayout):
     load = ObjectProperty(None)
     cancel = ObjectProperty(None)
+
+class ScrollableLabel(ScrollView):
+    text = StringProperty('')
 
 
 #============== Main Widget =================
@@ -680,6 +694,7 @@ class SortingHatApp(App):
         Window.size = (600, 400)
         self.icon = 'static/sorting-hat-logo.png'
         self.use_kivy_settings = False
+
         return SHPanels()
 
     def build_config(self, config):

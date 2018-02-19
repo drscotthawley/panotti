@@ -8,7 +8,7 @@
 # TODO: if <file> is actually a directory, then it should greate a new <directory>.jpeg
 #  AND *recursively* create a new version of original directory with all npy files replaced
 #  by image files.
-#   Intended usage:  ./npy2img Preproc/      (
+#   Intended usage:  ./np2img Preproc/      (
 #                    would generate Preproc.jpeg/Train/*.npy.jpeg, etc)
 # ...'course, alternatively we could just let ../preprocess_data.py save as jpegs
 #  and enable ../panotti/datautils.py, etc to read them.
@@ -22,19 +22,30 @@ from scipy.misc import imsave
 def convert_one_file(file_list, out_format, mono, file_index):
     infile = file_list[file_index]
     if os.path.isfile(infile):
-        outfile = infile+"."+out_format
-        print("    Operating on file",infile,", converting to ",outfile)
-        arr = np.load(infile)
-        #arr = np.reshape(arr, (arr.shape[2],arr.shape[3]))
-        arr = np.moveaxis(arr, 1, 3).squeeze()      # we use the 'channels_first' in tensorflow, but images have channels_first. squeeze removes unit-size axes
-        arr = np.flip(arr, 0)    # flip spectrogram image right-side-up before saving, for viewing
-        if (2 == channels): # special case: 1=greyscale, 3=RGB, 4=RGBA, ..no 2.  so...?
-            # pad a channel of zeros (for blue) and you'll just be stuck with it forever. so channels will =3
-            b = np.zeros((arr.shape[0], layers.shape[1], 3))  # 3-channel array of zeros
-            b[:,:,:-1] = arr                          # fill the zeros on the 1st 2 channels
-            imsave(outfile, b, format=out_format)
+        basename, extension = os.path.splitext(infile)
+        if ('.npz' == extension) or ('.npy' == extension):
+            outfile = basename+"."+out_format
+            print("    Operating on file",infile,", converting to ",outfile)
+            arr = np.load(infile)
+            channels = arr.shape[1]
+            if (channels <= 4):
+                #arr = np.reshape(arr, (arr.shape[2],arr.shape[3]))
+                arr = np.moveaxis(arr, 1, 3).squeeze()      # we use the 'channels_first' in tensorflow, but images have channels_first. squeeze removes unit-size axes
+                arr = np.flip(arr, 0)    # flip spectrogram image right-side-up before saving, for easier viewing
+                if (2 == channels): # special case: 1=greyscale, 3=RGB, 4=RGBA, ..no 2.  so...?
+                    # pad a channel of zeros (for blue) and you'll just be stuck with it forever. so channels will =3
+                    b = np.zeros((arr.shape[0], layers.shape[1], 3))  # 3-channel array of zeros
+                    b[:,:,:-1] = arr                          # fill the zeros on the 1st 2 channels
+                    imsave(outfile, b, format=out_format)
+                else:
+                    imsave(outfile, arr, format=out_format)
+            else:
+                print("   Skipping file",infile,": Channels > 4. Not representable in jpeg or png format.")
         else:
-            imsave(outfile, arr, format=out_format)
+            print("    Skipping file",infile,": not numpy format")
+    else:
+        print("    Skipping file",infile,": file not found")
+
     return
 
 

@@ -5,13 +5,15 @@ SortingHatApp  - Desktop version of Sorting H.A.T. program.
 Author: Scott H. Hawley @drscotthawley
 
 TODO:
-    - Everything.  Still just a facade, doesn't actually work at all.
-    - Just learning Kivy as I write this. Still quite confused.
+    - Speed up sort. It's fast enough to run on a laptop, so we do, but it could be even faster.
     - Should create a "ButtonBarAndStatus" class that can be reused multiple times
 
 Requirements:
+    - Panotti on both local machine ("laptop") and server
+    - Valid SSH login on server.  TODO: generalize from SSH to HTTP, or some AWS and/or Google Cloud APis
     $ pip install kivy kivy-garden scandir functools paramiko git+https://github.com/jbardin/scp.py.git
     $ garden install filebrowser
+
 ============
 '''
 
@@ -462,7 +464,7 @@ class SHPanels(TabbedPanel):
         cmd += '--dur='+App.get_running_app().config.get('example','duration')+' '
         cmd += '-r='+App.get_running_app().config.get('example','sampleRate')+' '
         cmd += '--format='+App.get_running_app().config.get('example','specFileFormat')+' '
-        cmd += ' | tee log.txt '
+        #cmd += ' | tee log.txt '
         print('Executing command: ',cmd)
         spawn(cmd, progress=partial(self.monitor_preproc,self.parentDir+PREPROC_DIR), interval=0.2, completion=None )
         return

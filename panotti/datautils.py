@@ -7,8 +7,9 @@ import librosa
 import os
 from os.path import isfile
 from imageio import imread, imwrite
+import glob
 
-def listdir_nohidden(path):        # ignore hidden files
+def listdir_nohidden(path):        # ignore hidden files. call should be inside list()
     for f in os.listdir(path):
         if not f.startswith('.'):
             yield f
@@ -16,7 +17,7 @@ def listdir_nohidden(path):        # ignore hidden files
 # class names are subdirectory names in Preproc/ directory
 def get_class_names(path="Preproc/Train/", sort=True):
     if (sort):
-        class_names = sorted(listdir_nohidden(path))     # sorted alphabetically for consistency with "ls" command
+        class_names = sorted(list(listdir_nohidden(path)))     # sorted alphabetically for consistency with "ls" command
     else:
         class_names = listdir_nohidden(path)             # not in same order as "ls", because Python
     return class_names

@@ -68,7 +68,7 @@ def main(args):
             file_count += 1
             print("File",infile,":",end="")
 
-            signal, sr = librosa.load(infile, mono=mono, sr=resample)
+            signal, sr = load_audio(infile, mono=mono, sr=resample)
 
             y_proba = predict_one(signal, sr, model, expected_melgram_shape) # class_names, model, weights_file=args.weights)
 

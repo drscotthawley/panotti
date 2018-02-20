@@ -7,8 +7,9 @@ import librosa
 import os
 from os.path import isfile
 from imageio import imread, imwrite
+import glob
 
-def listdir_nohidden(path):        # ignore hidden files
+def listdir_nohidden(path):        # ignore hidden files. call should be inside list()
     for f in os.listdir(path):
         if not f.startswith('.'):
             yield f
@@ -16,7 +17,7 @@ def listdir_nohidden(path):        # ignore hidden files
 # class names are subdirectory names in Preproc/ directory
 def get_class_names(path="Preproc/Train/", sort=True):
     if (sort):
-        class_names = sorted(listdir_nohidden(path))     # sorted alphabetically for consistency with "ls" command
+        class_names = sorted(list(listdir_nohidden(path)))     # sorted alphabetically for consistency with "ls" command
     else:
         class_names = listdir_nohidden(path)             # not in same order as "ls", because Python
     return class_names
@@ -50,6 +51,23 @@ def save_melgram(outfile, melgram, out_format='npz'):
     else:
         np.savez_compressed(outfile,melgram=melgram)    # default is compressed npz file
     return
+
+
+def load_audio(audio_path, mono=None, sr=None, convertOSXaliases=True):  # wrapper for librosa.load
+    try:
+        signal, sr = librosa.load(audio_path, mono=mono, sr=sr)
+    except NoBackendError as e:
+        if ('Darwin' == platform.system()):   # handle OS X alias files gracefully
+            source = resolve_osx_alias(audio_path, convert=convertOSXaliases, already_checked_os=True) # convert to symlinks for next time
+            try:
+                signal, sr = librosa.load(source, mono=mono, sr=sr)
+            except NoBackendError as e:
+                print("\n*** ERROR: Could not open audio file {}".format(audio_path),"\n",flush=True)
+                raise e
+        else:
+            print("\n*** ERROR: Could not open audio file {}".format(audio_path),"\n",flush=True)
+            raise e
+    return signal, sr
 
 
 def load_melgram(file_path):

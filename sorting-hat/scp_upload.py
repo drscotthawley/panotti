@@ -25,7 +25,7 @@ def scp_upload(src_blob='Preproc.tar.gz', dst_blob="~", options={'hostname': 'le
     client = SSHClient()
     client.load_system_host_keys()
     client._policy = WarningPolicy()
-    client.set_missing_host_key_policy(WarningPolicy())
+    client.set_missing_host_key_policy(WarningPolicy())  # hmm. WarningPolicy? Most people use AutoAddPolicy. 
 
     ssh_config = SSHConfig()
     user_config_file = os.path.expanduser("~/.ssh/config")
@@ -45,9 +45,10 @@ def scp_upload(src_blob='Preproc.tar.gz', dst_blob="~", options={'hostname': 'le
 
     client.connect(**cfg)
 
+    socket_timeout = None # number of seconds for timeout. None = never timeout. TODO: None means program may hang. But timeouts are annoying!
 
     # SCPCLient takes a paramiko transport and progress callback as its arguments.
-    scp = SCPClient(client.get_transport(), progress=progress)
+    scp = SCPClient(client.get_transport(), progress=progress, socket_timeout=socket_timeout)
 
     # NOW we can finally upload! (in a separate process)
     #scp.put(src_blob, dst_blob)   # now in scp_thread

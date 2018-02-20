@@ -15,10 +15,9 @@
 # TODO: - make it work in parallel
 #       - security upgrade: shell call will allow untrusted execution if 'path' contains ';'', etc.
 #
-# NOTE: This does not attempt to convert the alias to a symbolic link.
-#       You could do that, but that would take more time.
-#       Instead, it just gives you the name to read from instead.
-
+# NOTE: By default, this only returns the names of the original source files,
+#       but if you set convert=True, it will also convert aliases to symbolic links.
+#
 import subprocess
 import platform
 
@@ -46,7 +45,7 @@ def isAlias(path, already_checked_os=False):
     return False
 
 
-def resolve_osx_alias(path, already_checked_os=False):        # single file/path name
+def resolve_osx_alias(path, already_checked_os=False, convert=False):        # single file/path name
     if (not already_checked_os) and ('Darwin' != platform.system()):  # already_checked just saves a few microseconds ;-)
         return path
     line_1='tell application "Finder"'
@@ -59,19 +58,22 @@ def resolve_osx_alias(path, already_checked_os=False):        # single file/path
     line_8 ='end tell'
     cmd = "osascript -e '"+line_1+"' -e '"+line_2+"' -e '"+line_3+"' -e '"+line_4+"' -e '"+line_5+"' -e '"+line_6+"' -e '"+line_7+"' -e '"+line_8+"'"
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    for line in p.stdout.readlines():
-        out = line.decode('UTF-8').replace('\n','')
-        return out
     retval = p.wait()
+    line = p.stdout.readlines()[0]        # TODO: this breaks if there's any error messages
+    source = line.decode('UTF-8').replace('\n','')
+    if (convert):
+        os.remove(path)
+        os.symlink(source, path)
+    return source
 
 
-def resolve_osx_aliases(filelist):  # multiple files
+def resolve_osx_aliases(filelist, convert=False):  # multiple files
     #print("filelist = ",filelist)
     if ('Darwin' != platform.system()):
         return filelist
     outlist = []
     for infile in filelist:
-        outlist.append(resolve_osx_alias(infile, already_checked_os=True))
+        outlist.append(resolve_osx_alias(infile, already_checked_os=True, convert=convert))
     #print("outlist = ",outlist)
     return outlist
 

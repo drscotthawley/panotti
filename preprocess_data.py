@@ -46,11 +46,11 @@ def convert_one_file(printevery, class_index, class_files, nb_classes, classname
         already_split, n_train, outpath, subdir, max_shape, clean, out_format, file_index):
     infilename = class_files[file_index]
     audio_path = dirname + '/' + infilename
+
     if (0 == file_index % printevery) or (file_index+1 == len(class_files)):
         print("\r Processing class ",class_index+1,"/",nb_classes,": \'",classname,
-            "\', File ",file_index+1,"/", n_load,": ",audio_path,"                                 ",
-            sep="",end="\r", flush=True)
-
+            "\', File ",file_index+1,"/", n_load,": ",audio_path,"                             ",
+            sep="",end="\r")
     sr = None
     if (resample is not None):
         sr = resample
@@ -58,12 +58,11 @@ def convert_one_file(printevery, class_index, class_files, nb_classes, classname
     try:
         signal, sr = librosa.load(audio_path, mono=mono, sr=sr)
     except NoBackendError as e:
-        print("\n*** ERROR: Could not open audio file {}".format(path),"\n",flush=True)
+        print("\n*** ERROR: Could not open audio file {}".format(audio_path),"\n",flush=True)
         raise e
 
     # Reshape / pad so all output files have same shape
     shape = get_canonical_shape(signal)     # either the signal shape or a leading one
-    #print("shape = ",shape,end="")
     if (shape != signal.shape):             # this only evals to true for mono
         signal = np.reshape(signal, shape)
         #print("...reshaped mono so new shape = ",signal.shape, end="")
@@ -75,9 +74,7 @@ def convert_one_file(printevery, class_index, class_files, nb_classes, classname
     #print(",  use_shape = ",use_shape)
     padded_signal[:use_shape[0], :use_shape[1]] = signal[:use_shape[0], :use_shape[1]]
 
-    #print("Making layers for filename ",infilename)
     layers = make_layered_melgram(padded_signal, sr)
-    #print("    Finished making layers for filename ",infilename)
 
     if not already_split:
         if (file_index >= n_train):
@@ -89,24 +86,6 @@ def convert_one_file(printevery, class_index, class_files, nb_classes, classname
 
     outfile = outpath + outsub + classname + '/' + infilename+'.'+out_format
     save_melgram(outfile, layers, out_format=out_format)
-    '''
-    channels = layers.shape[1]
-
-    if (('jpeg' == out_format) or ('png' == out_format)) and (channels <=4):
-        layers = np.moveaxis(layers, 1, 3).squeeze()      # we use the 'channels_first' in tensorflow, but images have channels_first. squeeze removes unit-size axes
-        layers = np.flip(layers, 0)    # flip spectrogram image right-side-up before saving, for viewing
-        #print("first layers.shape = ",layers.shape,end="")
-        if (2 == channels): # special case: 1=greyscale, 3=RGB, 4=RGBA, ..no 2.  so...?
-            # pad a channel of zeros (for blue) and you'll just be stuck with it forever. so channels will =3
-            # TODO: this is SLOWWW
-            b = np.zeros((layers.shape[0], layers.shape[1], 3))  # 3-channel array of zeros
-            b[:,:,:-1] = layers                          # fill the zeros on the 1st 2 channels
-            imwrite(outfile, b, format=out_format)
-        else:
-            imwrite(outfile, layers, format=out_format)
-    else:
-        np.save(outfile,layers)
-    '''
     return
 
 
@@ -162,7 +141,7 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
                 os.mkdir( train_outpath+classname );
                 os.mkdir( test_outpath+classname );
             dirname = inpath+subdir+classname
-            class_files = os.listdir(dirname)   # all filenames for this class
+            class_files = list(listdir_nohidden(dirname))   # all filenames for this class, skip hidden files
             class_files.sort()
             if (not sequential): # shuffle directory listing (e.g. to avoid alphabetic order)
                 np.random.shuffle(class_files)   # shuffle directory listing (e.g. to avoid alphabetic order)
@@ -202,6 +181,9 @@ if __name__ == '__main__':
     parser.add_argument('-d', "--dur",  type=float, default=None,   help='Max duration (in seconds) of each clip')
     parser.add_argument('-c', "--clean", help="Assume 'clean data'; Do not check to find max shape (faster)", action='store_true')
     parser.add_argument('-f','--format', help="format of output file (npz, jpeg, png, etc). Default = npz", type=str, default='npz')
+    parser.add_argument('-i','--inpath', help="input directory for audio samples (default='Samples')", type=str, default='Samples')
+    parser.add_argument('-o','--outpath', help="output directory for spectrograms (default='Preproc')", type=str, default='Preproc')
+
     args = parser.parse_args()
     if (('Darwin' == platform.system()) and (not args.mono)):
         # bug/feature in OS X that causes np.dot() to sometimes hang if multiprocessing is running
@@ -212,5 +194,5 @@ if __name__ == '__main__':
         print("  See https://github.com/numpy/numpy/issues/5752 for more on this.")
         print("")
 
-    preprocess_dataset(resample=args.resample, already_split=args.already, sequential=args.sequential, mono=args.mono,
+    preprocess_dataset(inpath=args.inpath+'/', outpath=args.outpath+'/', resample=args.resample, already_split=args.already, sequential=args.sequential, mono=args.mono,
         dur=args.dur, clean=args.clean, out_format=args.format)

@@ -477,17 +477,18 @@ class SHPanels(TabbedPanel):
         cmd = 'cd '+self.parentDir+'; rm -rf '+PREPROC_DIR+' '+ARCHIVE_NAME+'; '+PANOTTI_HOME+'/preprocess_data.py '
         if App.get_running_app().config.get('preproc', 'sequential'):   # ordering
             cmd += '-s '
-        if App.get_running_app().config.get('preproc', 'clean'):   # clean mode overrides some other settings
+        clean =  App.get_running_app().config.get('preproc', 'clean')
+        if (1 == int(clean)):  # clean mode overrides some other settings
             cmd += '--clean '
         else:
-            if App.get_running_app().config.get('preproc', 'mono'):
+            if (1== int(App.get_running_app().config.get('preproc', 'mono'))):
                 cmd += '-m '
             cmd += '--dur='+App.get_running_app().config.get('preproc','duration')+' '
         cmd += '-r='+App.get_running_app().config.get('preproc','sampleRate')+' '
         cmd += '-i='+self.samplesDir+' '
         cmd += '--format='+App.get_running_app().config.get('preproc','specFileFormat')+' '
         #cmd += ' | tee log.txt '
-        print('Executing command: ',cmd)
+        print('Preproc. Executing command: ',cmd)
         spawn(cmd, progress=partial(self.monitor_preproc,self.parentDir+PREPROC_DIR), interval=0.2, completion=None )
         return
 

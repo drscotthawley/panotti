@@ -36,13 +36,18 @@ def isAlias(path, already_checked_os=False):
 
     cmd = "osascript -e '"+line_1+"' -e '"+line_2+"' -e '"+line_3+"' -e '"+line_4+"' -e '"+line_5+"' -e '"+line_6+"' -e '"+line_7+"' -e '"+line_8+"'"
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    for line in p.stdout.readlines():
+    retval = p.wait()
+    if (0 == retval):
+        line = p.stdout.readlines()[0]
         line2 = line.decode('UTF-8').replace('\n','')
-        #print("line2 = [",repr(line2),"]",sep="")
         if ('true' == line2):
             return True
-    retval = p.wait()
-    return False
+        else:
+            return False
+    else:
+        print('resolve_osx_alias: Error: subprocess returned non-zero exit code '+str(retval))
+    return None
+
 
 
 def resolve_osx_alias(path, already_checked_os=False, convert=False):        # single file/path name
@@ -59,11 +64,15 @@ def resolve_osx_alias(path, already_checked_os=False, convert=False):        # s
     cmd = "osascript -e '"+line_1+"' -e '"+line_2+"' -e '"+line_3+"' -e '"+line_4+"' -e '"+line_5+"' -e '"+line_6+"' -e '"+line_7+"' -e '"+line_8+"'"
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     retval = p.wait()
-    line = p.stdout.readlines()[0]        # TODO: this breaks if there's any error messages
-    source = line.decode('UTF-8').replace('\n','')
-    if (convert):
-        os.remove(path)
-        os.symlink(source, path)
+    if (0 == retval):
+        line = p.stdout.readlines()[0]        # TODO: this breaks if there's any error messages
+        source = line.decode('UTF-8').replace('\n','')
+        if (convert):
+            os.remove(path)
+            os.symlink(source, path)
+    else:
+        print('resolve_osx_aliases: Error: subprocess returned non-zero exit code '+str(retval))
+        source = ''
     return source
 
 

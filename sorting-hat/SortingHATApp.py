@@ -332,6 +332,7 @@ class SHPanels(TabbedPanel):
     def done_fake(self):
         self.ids['statusMsg'].text = "Server is up and running."
         self.ids['serverButton'].state = "down"
+        return False
 
     def progress_display(self, barname, thread, completion, t):
         percent = int((self.count+1) / self.maxval * 100)
@@ -437,6 +438,8 @@ class SHPanels(TabbedPanel):
             else:                                           # some other file (non-hdf5)
                 self.sortFileList=[file_path]               #TODO: design descision: overwrite sortFileList (not append?)
                 self.ids['sortFilesDisplay'].text = file_path
+                self.ids['sortButton'].state = 'normal'         # reset the sort button state when files are dropped in
+
         else:                                               # this is yet another in a series of events triggered by dragging multiple files
             self.sortFileList.append(file_path)
             self.ids['sortFilesDisplay'].text += '\n'+file_path
@@ -456,8 +459,9 @@ class SHPanels(TabbedPanel):
 
     def monitor_preproc(self, folder, thread, completion, dt):
         files_processed = count_files(folder)      # Folder should be Preproc
-        self.ids['preprocProgress'].value = max(3, int(files_processed / self.totalClips * 100))
-        self.ids['statusMsg'].text = str(files_processed)+"/"+str(self.totalClips)+" files processed"
+        percent = max(3, int(files_processed / self.totalClips * 100))
+        self.ids['preprocProgress'].value = percent
+        self.ids['statusMsg'].text = str(files_processed)+"/"+str(self.totalClips)+" files processed ("+str(percent)+"%)"
         if (self.ids['preprocProgress'].value >= 99.4):  # finished
             self.ids['preprocButton'].state = "down"
             return False              # this just cancels the clock schedule
@@ -471,13 +475,17 @@ class SHPanels(TabbedPanel):
         #cmd = 'cd '+self.parentDir+'; rm -rf '+PREPROC_DIR
         #p = subprocess.call(cmd, shell=True)                       # blocking
         cmd = 'cd '+self.parentDir+'; rm -rf '+PREPROC_DIR+' '+ARCHIVE_NAME+'; '+PANOTTI_HOME+'/preprocess_data.py '
-        if App.get_running_app().config.get('example', 'sequential'):
+        if App.get_running_app().config.get('preproc', 'sequential'):   # ordering
             cmd += '-s '
-        if App.get_running_app().config.get('example', 'mono'):
-            cmd += '-m '
-        cmd += '--dur='+App.get_running_app().config.get('example','duration')+' '
-        cmd += '-r='+App.get_running_app().config.get('example','sampleRate')+' '
-        cmd += '--format='+App.get_running_app().config.get('example','specFileFormat')+' '
+        if App.get_running_app().config.get('preproc', 'clean'):   # clean mode overrides some other settings
+            cmd += '--clean '
+        else:
+            if App.get_running_app().config.get('preproc', 'mono'):
+                cmd += '-m '
+            cmd += '--dur='+App.get_running_app().config.get('preproc','duration')+' '
+        cmd += '-r='+App.get_running_app().config.get('preproc','sampleRate')+' '
+        cmd += '-i='+self.samplesDir+' '
+        cmd += '--format='+App.get_running_app().config.get('preproc','specFileFormat')+' '
         #cmd += ' | tee log.txt '
         print('Executing command: ',cmd)
         spawn(cmd, progress=partial(self.monitor_preproc,self.parentDir+PREPROC_DIR), interval=0.2, completion=None )
@@ -489,7 +497,7 @@ class SHPanels(TabbedPanel):
 
     # status messages , progress and such
     def my_upload_callback(self, filename, size, sent):
-        percent = min( 60 + int( float(sent)/float(size)*60),  100)
+        percent = min( 25 + int( float(sent)/float(size)*75),  100)  # start at 25%, go up to 100
         prog_str = 'Uploading progress: '+str(percent)+' %'
         self.ids['statusMsg'].text = prog_str
         barname = 'uploadProgress'
@@ -501,8 +509,8 @@ class SHPanels(TabbedPanel):
 
     # TODO: decide on API for file transfer. for now, we use scp
     def actual_upload(self, archive_path):
-        self.server = whitelist_string( App.get_running_app().config.get('example', 'server') )
-        self.username = whitelist_string( App.get_running_app().config.get('example', 'username') )
+        self.server = whitelist_string( App.get_running_app().config.get('network', 'server') )
+        self.username = whitelist_string( App.get_running_app().config.get('network', 'username') )
         scp_upload( src_blob=archive_path, options={'hostname': self.server, 'username': self.username}, progress=self.my_upload_callback )
 
     # Watches progress of packaging the Preproc/ directory.
@@ -519,6 +527,7 @@ class SHPanels(TabbedPanel):
             files_processed = int(tar_check)
             files_to_be_processed = count_files(self.parentDir+PREPROC_DIR)
             percent = int( files_processed / files_to_be_processed * 100)
+            self.ids['uploadProgress'].value = int(percent * .25)  # make 30% of the upload bar be the archiving
             self.ids['statusMsg'].text = "Archiving... "+str(percent)+" %"
 
         if not thread.isAlive():           # archive process completed
@@ -532,7 +541,8 @@ class SHPanels(TabbedPanel):
     # this actually initiates "archiving" (zip/tar) first, and THEN uploads
     def upload(self,barname):
         archive_path =  self.parentDir+PREPROC_DIR+'.tar.gz'
-        self.ready_to_upload = os.path.exists(self.parentDir+PREPROC_DIR) and (self.ids['serverProgress'].value >= 99) and (self.ids['preprocProgress'].value >= 99)
+        self.ready_to_upload = (os.path.exists(self.parentDir+PREPROC_DIR) and (self.ids['serverProgress'].value >= 99) and
+            ((self.ids['preprocProgress'].value >= 99) or (0 == self.ids['preprocProgress'].value)) )  # don't allow upload in the middle of processing
         if not self.ready_to_upload:
             return
         self.ids['statusMsg'].text = "Archiving "+PREPROC_DIR+"..."
@@ -575,22 +585,22 @@ class SHPanels(TabbedPanel):
         self.ids['statusMsg'].text = "Training, please wait..."
 
     def train(self, barname, method='ssh'):
-        self.ready_to_train = (self.ids['uploadProgress'].value >= 100)
+        self.ready_to_train = True#(self.ids['uploadProgress'].value >= 100)
         if not self.ready_to_train:
             return
         Clock.schedule_once(self.change_train_status_msg, 0.5)  # gotta delay by a bit to update the message
 
-        self.server = whitelist_string( App.get_running_app().config.get('example', 'server') )
-        self.username = whitelist_string( App.get_running_app().config.get('example', 'username') )
+        self.server = whitelist_string( App.get_running_app().config.get('network', 'server') )
+        self.username = whitelist_string( App.get_running_app().config.get('network', 'username') )
 
         if ('ssh' == method):
         # remote code execution via SSH server. could use sorting-hat HTTP server instead
-            cmd = 'ssh -t '+self.username+'@'+self.server+' "tar xvfz Preproc.tar.gz;'
-            if ('Random' == App.get_running_app().config.get('example', 'weightsOption')):
-                cmd+= ' rm -f weights.hdf5;'
+            cmd = 'ssh -t '+self.username+'@'+self.server+' "rm -rf '+PREPROC_DIR+'; tar xvfz '+ARCHIVE_NAME+';'
+            if ('Random' == App.get_running_app().config.get('train', 'weightsOption')) and (self.ids['trainProgress'].value < 99):
+                cmd+= ' rm -f weights.hdf5;'   # reset weights if first time pressing the train button, otherwise reuse what's on the server
             cmd += ' ~/panotti/train_network.py'
-            cmd += ' --epochs='+App.get_running_app().config.get('example','epochs')
-            cmd += ' --val='+App.get_running_app().config.get('example','val_split')
+            cmd += ' --epochs='+App.get_running_app().config.get('train','epochs')
+            cmd += ' --val='+App.get_running_app().config.get('train','val_split')
             cmd += ' | tee log.txt"'
             print("Executing command cmd = [",cmd,"]")
 
@@ -689,29 +699,36 @@ class SHPanels(TabbedPanel):
 
 #============== End of main widget ==============
 
-class SortingHatApp(App):
+class SortingHATApp(App):
     def build(self):
-        Window.size = (600, 400)
+        Window.size = (700, 400)
         self.icon = 'static/sorting-hat-logo.png'
         self.use_kivy_settings = False
 
         return SHPanels()
 
     def build_config(self, config):
-        config.setdefaults('example', {
+        config.setdefaults('network', {
             'server': 'lecun',
             'username': os.getlogin(),      # default is that they have the same username on both local & server
-            'sshKeyPath': '~/.ssh/id_rsa.pub',
+            'sshKeyPath': '~/.ssh/id_rsa.pub'})
+        config.setdefaults('preproc', {
             'mono': True,
-            'sequential': True,
+            'clean': False,
+            'sequential': False,   # for test/train split. True: preserve order and send last files (per class) to Test.  False=shuffle first
             'duration': 3,
             'sampleRate': 44100,
-            'specFileFormat': 'npz',   # note, color png supports only up to 4 channels of audio, npz is arbitrarily many, jpeg is lossy
+            'specFileFormat': 'npz', # note, color png supports only up to 4 channels of audio, npz is arbitrarily many, jpeg is lossy
+            'split_audio': False,  # truncate files that are too long, rather than send multiple chopped-up parts through
+                                   # Note: if split_audio=True and sequential=False, you'll likely end up corrupting the Testing set
+            })
+        config.setdefaults('train', {
             'weightsOption': 'Default',
             'server': 'lecun.belmont.edu',
             'sshKeyPath': '~/.ssh/id_rsa.pub',
             'epochs': 20,
             'val_split': 0.1,
+            'aug_fac': 1.0,
             })
 
     def build_settings(self, settings):
@@ -724,5 +741,6 @@ class SortingHatApp(App):
         print(config, section, key, value)
 
 
+
 if __name__ == '__main__':
-    SortingHatApp().run()
+    SortingHATApp().run()

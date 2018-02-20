@@ -20,6 +20,7 @@
 #
 import subprocess
 import platform
+import os
 
 # returns true if a file is an OSX alias, false otherwise
 def isAlias(path, already_checked_os=False):
@@ -53,6 +54,7 @@ def isAlias(path, already_checked_os=False):
 def resolve_osx_alias(path, already_checked_os=False, convert=False):        # single file/path name
     if (not already_checked_os) and ('Darwin' != platform.system()):  # already_checked just saves a few microseconds ;-)
         return path
+    path = os.path.abspath(path)       # osascript needs absolute paths
     line_1='tell application "Finder"'
     line_2='set theItem to (POSIX file "'+path+'") as alias'
     line_3='if the kind of theItem is "alias" then'

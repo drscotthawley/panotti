@@ -14,6 +14,7 @@ from PIL import Image
 from functools import partial
 from imageio import imwrite
 import multiprocessing as mp
+from utils.resolve_osx_aliases import resolve_osx_alias
 
 # this is either just the regular shape, or it returns a leading 1 for mono
 def get_canonical_shape(signal):
@@ -55,11 +56,7 @@ def convert_one_file(printevery, class_index, class_files, nb_classes, classname
     if (resample is not None):
         sr = resample
 
-    try:
-        signal, sr = librosa.load(audio_path, mono=mono, sr=sr)
-    except NoBackendError as e:
-        print("\n*** ERROR: Could not open audio file {}".format(audio_path),"\n",flush=True)
-        raise e
+    signal, sr = load_audio(audio_path, mono=mono, sr=sr)
 
     # Reshape / pad so all output files have same shape
     shape = get_canonical_shape(signal)     # either the signal shape or a leading one

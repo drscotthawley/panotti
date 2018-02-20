@@ -82,7 +82,9 @@ def resolve_osx_aliases(filelist, convert=False):  # multiple files
         return filelist
     outlist = []
     for infile in filelist:
-        outlist.append(resolve_osx_alias(infile, already_checked_os=True, convert=convert))
+        source = resolve_osx_alias(infile, already_checked_os=True, convert=convert)
+        if ('' != source):
+            outlist.append(source)
     #print("outlist = ",outlist)
     return outlist
 

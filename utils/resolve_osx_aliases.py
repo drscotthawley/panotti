@@ -26,15 +26,16 @@ import os
 def isAlias(path, already_checked_os=False):
     if (not already_checked_os) and ('Darwin' != platform.system()):  # already_checked just saves a few microseconds ;-)
         return False
+    checkpath = os.path.abspath(path)       # osascript needs absolute paths
+    # Next several lines are AppleScript
     line_1='tell application "Finder"'
-    line_2='set theItem to (POSIX file "'+path+'") as alias'
+    line_2='set theItem to (POSIX file "'+checkpath+'") as alias'
     line_3='if the kind of theItem is "alias" then'
     line_4='   return true'
     line_5='else'
     line_6='   return false'
     line_7='end if'
     line_8='end tell'
-
     cmd = "osascript -e '"+line_1+"' -e '"+line_2+"' -e '"+line_3+"' -e '"+line_4+"' -e '"+line_5+"' -e '"+line_6+"' -e '"+line_7+"' -e '"+line_8+"'"
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     retval = p.wait()
@@ -54,24 +55,25 @@ def isAlias(path, already_checked_os=False):
 def resolve_osx_alias(path, already_checked_os=False, convert=False):        # single file/path name
     if (not already_checked_os) and ('Darwin' != platform.system()):  # already_checked just saves a few microseconds ;-)
         return path
-    path = os.path.abspath(path)       # osascript needs absolute paths
+    checkpath = os.path.abspath(path)       # osascript needs absolute paths
+    # Next several lines are AppleScript
     line_1='tell application "Finder"'
-    line_2='set theItem to (POSIX file "'+path+'") as alias'
+    line_2='set theItem to (POSIX file "'+checkpath+'") as alias'
     line_3='if the kind of theItem is "alias" then'
     line_4='   get the posix path of (original item of theItem as text)'
     line_5='else'
-    line_6='return "'+path+'"'
+    line_6='return "'+checkpath+'"'
     line_7 ='end if'
     line_8 ='end tell'
     cmd = "osascript -e '"+line_1+"' -e '"+line_2+"' -e '"+line_3+"' -e '"+line_4+"' -e '"+line_5+"' -e '"+line_6+"' -e '"+line_7+"' -e '"+line_8+"'"
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     retval = p.wait()
     if (0 == retval):
-        line = p.stdout.readlines()[0]        # TODO: this breaks if there's any error messages
+        line = p.stdout.readlines()[0]        
         source = line.decode('UTF-8').replace('\n','')
         if (convert):
-            os.remove(path)
-            os.symlink(source, path)
+            os.remove(checkpath)
+            os.symlink(source, checkpath)
     else:
         print('resolve_osx_aliases: Error: subprocess returned non-zero exit code '+str(retval))
         source = ''

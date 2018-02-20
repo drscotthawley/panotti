@@ -30,15 +30,16 @@ def find_max_shape(path, mono=False, sr=None, dur=None, clean=False):
     shapes = []
     for dirname, dirnames, filenames in os.walk(path):
         for filename in filenames:
-            filepath = os.path.join(dirname, filename)
-            try:
-                signal, sr = librosa.load(filepath, mono=mono, sr=sr)
-            except NoBackendError as e:
-                print("Could not open audio file {}".format(filepath))
-                raise e
-            if (clean):                           # Just take the first file and exit
-                return get_canonical_shape(signal)
-            shapes.append(get_canonical_shape(signal))
+            if not filename.startswith('.'):    # ignore hidden files
+                filepath = os.path.join(dirname, filename)
+                try:
+                    signal, sr = librosa.load(filepath, mono=mono, sr=sr)
+                except NoBackendError as e:
+                    print("Could not open audio file {}".format(filepath))
+                    raise e
+                if (clean):                           # Just take the first file and exit
+                    return get_canonical_shape(signal)
+                shapes.append(get_canonical_shape(signal))
 
     return (max(s[0] for s in shapes), max(s[1] for s in shapes))
 

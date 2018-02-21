@@ -16,7 +16,8 @@ Requirements:
 
 ============
 '''
-
+import os, sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))  # add panotti to Python path
 from kivy.app import App
 from kivy.clock import Clock
 from kivy.uix.tabbedpanel import TabbedPanel, TabbedPanelItem
@@ -36,9 +37,10 @@ import subprocess
 import threading
 from scp_upload import scp_upload
 from functools import partial
-import os
 import re
 from pathlib import Path
+from panotti.datautils import *
+import csv
 
 PANOTTI_HOME = os.path.expanduser("~")+"/panotti/"
 PREPROC_DIR = "Preproc"
@@ -110,180 +112,6 @@ def whitelist_string(string):
     string = re.sub('[^a-zA-Z\d\ ]|( ){2,}','-',string )
     return string
 
-Builder.load_string("""
-#:import expanduser os.path.expanduser
-
-<ScrollableLabel>:  # https://github.com/kivy/kivy/wiki/Scrollable-Label
-    Label:
-        size_hint_y: None
-        height: self.texture_size[1]
-        text_size: self.width, None
-        text: root.text
-        halign: 'center'
-        valign: 'center'
-
-
-<CustomWidthTabb@TabbedPanelItem>
-    width: self.texture_size[0]
-    padding: 20, 0
-    size_hint_x: None
-
-<ButtonWithState@Button>
-    background_color: 0,0,0,0  # the last zero is the critical on, make invisible
-    canvas.before:
-        Color:
-            rgba: (.35,.35,.35,1) if self.state=='normal' else (0,.5,.0,1)  # visual feedback of press
-        RoundedRectangle:
-            size: (self.width -2.0, self.height - 2.0)
-            pos: ((self.right - self.width + 2.0),(self.top - self.height + 2.0))
-            radius: [3,]
-
-<TextInputLikeLabel@TextInput>
-    # Really I just want a Label that supports text highlighting.  But kivy doesn't have that, so...
-    background_color: (.35,.35,.35,1)
-    foreground_color: (1, 1, 1, 1)
-    readonly: True
-    ## kivy doesn't support centering text in a TextInput, only in a Label
-    # left, right   https://stackoverflow.com/questions/40477956/kivy-textinput-horizontal-and-vertical-align-centering-text
-    padding_x: [self.center[0] - self._get_text_width(max(self._lines, key=len), self.tab_width, self._label_cached) / 2.0,0] if self.text else [self.center[0], 0]
-    # top, bottom
-    padding_y: [self.height / 2.0 - (self.line_height / 2.0) * len(self._lines), 0]
-
-<SHPanels>:
-    id: SH_widget
-    size_hint: 1,1
-    do_default_tab: False
-    tab_width: None
-    CustomWidthTabb:
-        id: trainPanel
-        text: 'Train the Neural Net'
-        BoxLayout:
-            orientation: 'vertical'
-            BoxLayout:
-                orientation: 'horizontal'
-                ButtonWithState:
-                    id: samplesButton
-                    text: 'Select Samples Folder'
-                    on_release: SH_widget.show_load('train')
-                Label:
-                    id: samplesDir
-                    text: 'No folder selected'
-                    size: self.texture_size
-            BoxLayout:
-                orientation: 'horizontal'
-                ButtonWithState:
-                    text: "Start Server"
-                    id: serverButton
-                    on_release: root.start_prog_anim('serverProgress')
-                ProgressBar:
-                    id: serverProgress
-                    value: 0
-            BoxLayout:
-                orientation: 'horizontal'
-                ButtonWithState:
-                    id: preprocButton
-                    text: "Create Spectrograms"
-                    on_release: root.preproc('preprocProgress')
-                ProgressBar:
-                    id: preprocProgress
-                    value: 0
-            BoxLayout:
-                orientation: 'horizontal'
-                ButtonWithState:
-                    text: "Upload"
-                    id: uploadButton
-                    on_release: root.upload('uploadProgress')
-                ProgressBar:
-                    id: uploadProgress
-                    value: 0
-            BoxLayout:
-                orientation: 'horizontal'
-                ButtonWithState:
-                    text: "Train"
-                    id: trainButton
-                    on_release: root.train('trainProgress')
-                ProgressBar:
-                    id: trainProgress
-                    value: 0
-            TextInputLikeLabel:
-                id: statusMsg
-                text: "Status: Initial State"
-                center: self.parent.center
-
-    CustomWidthTabb:
-        text: 'Sort Your Library'
-        id: sortPanel
-        BoxLayout:
-            orientation: 'vertical'
-            BoxLayout:
-                size_hint_y: 0.3
-                ButtonWithState:
-                    id: sortWeightsButton
-                    text: 'Select Weights File'
-                    on_release: SH_widget.show_load('sort_weights')
-                Label:
-                    id: sortWeightsLabel
-                    text: 'No weights file'
-            ScrollableLabel:
-                size_hint_y: 0.9
-                id: sortFilesDisplay
-                text: '\\n\\n\\n\\n[Drag in files to be sorted]'
-            BoxLayout:
-                size_hint_y: 0.3
-                ButtonWithState:
-                    text: 'Sort!'
-                    id: sortButton
-                    on_release: root.sort()
-                ProgressBar:
-                    id: sortProgress
-                    value: 0
-            TextInputLikeLabel:
-                id: sortStatus
-                size_hint_y: 0.3
-                text: "Status: Initial State"
-                center: self.parent.center
-    CustomWidthTabb:
-        text: 'About'
-        BoxLayout:
-            RstDocument:
-                text:
-                    '\\n'.join(("About", "-----------",
-                    "Sorting H.A.T.* - Organize your audio library with the help of neural nets.\\n",
-                    "Built on `Panotti <http://github.com/drscotthawley/panotti>`_ by @drscotthawley"))
-
-            Image:
-                source: 'static/sorting-hat-logo.png'
-                canvas.before:
-                    Color:
-                        rgba: .9, .9, .9, 1
-                    Rectangle:
-                        pos: self.pos
-                        size: self.size
-
-    CustomWidthTabb:
-        id: settingsPanel
-        text: 'Settings'
-        on_press: SH_widget.my_handle_settings()
-        Button:
-            text: 'Press to go to Train'
-            on_release: root.switch_to(trainPanel)
-
-
-
-<LoadDialog>:
-    BoxLayout:
-        size: root.size
-        pos: root.pos
-        orientation: "vertical"
-        FileBrowser:
-            id: filechooser
-            #multiselect: True.  # Nope, bad/ambigious. Kivy filebrowser needs to be rewritten.
-            dirselect: True
-            path: expanduser("~")
-            on_canceled: root.cancel()
-            on_success: root.load(filechooser.path, filechooser.selection)
-""")
-
 class LoadDialog(FloatLayout):
     load = ObjectProperty(None)
     cancel = ObjectProperty(None)
@@ -299,15 +127,20 @@ class SHPanels(TabbedPanel):
         super(SHPanels, self).__init__(**kwargs)
         Clock.schedule_once(self.on_tab_width, 0.1)
         Window.bind(on_dropfile=self._on_file_drop)
+        Clock.schedule_once(partial(self.switch, self.ids['buildPanel']), 0)
         self.last_drop_time = time.time()-10000
         self.progress_events = {}
         self.samplesDir = ''
         self.parentDir = ''
+        self.indexFile = ''
         self.ready_to_preproc = False
         self.ready_to_upload = False
         self.ready_to_train = False
         self.sortFileList = []
         self.sortWeightsFile = ''
+
+    def switch(self, tab, *args):   # panel switching
+        self.switch_to(tab)
 
     #----------- Testing stuffffff-------
         self.count = 0
@@ -330,7 +163,7 @@ class SHPanels(TabbedPanel):
 
     #-------------- Generic Utilities for testing / mock-up  ------------
     def done_fake(self):
-        self.ids['statusMsg'].text = "Server is up and running."
+        self.ids['trainStatus'].text = "Server is up and running."
         self.ids['serverButton'].state = "down"
         return False
 
@@ -349,7 +182,7 @@ class SHPanels(TabbedPanel):
     def count_up(self,maxval=100):     # some 'fake' task for testing purposes
         self.maxval = maxval
         for self.count in range(maxval):
-            time.sleep(0.05)
+            time.sleep(0.01)
 
 
     def start_prog_anim(self,barname):
@@ -386,7 +219,7 @@ class SHPanels(TabbedPanel):
 
     # either by drag-dropping or by using popup dialog, we now have one or more filenames/directory names
     def got_filenames(self, filenames, origin_button):
-        if (self.current_tab == self.ids['trainPanel']):
+        if (self.current_tab == self.ids['buildPanel']):
             self.samplesDir = filenames[0]
             if (os.path.isdir(self.samplesDir)):
                 self.parentDir =  str(Path(self.samplesDir).parent) + '/'
@@ -394,7 +227,7 @@ class SHPanels(TabbedPanel):
                 self.ids['samplesDir'].text = self.samplesDir
                 self.totalClips = count_files(self.samplesDir)
                 text = "Contains "+str(self.totalClips)+" files"
-                self.ids['statusMsg'].text = text
+                self.ids['buildStatus'].text = text
                 self.ids['samplesButton'].state = "down"
         elif ('sort_weights' == origin_button):
             self.sortWeightsFile = filenames[0]
@@ -449,11 +282,45 @@ class SHPanels(TabbedPanel):
 
     # this fires multiple times if multiple files are dropped
     def _on_file_drop(self, window, file_path):
-        if (self.current_tab == self.ids['trainPanel']):
+        if (self.current_tab == self.ids['buildPanel']):
             self.got_filenames( [file_path.decode('UTF-8')], 'train_button' )
         elif (self.current_tab == self.ids['sortPanel']):
             self.consolidate_drops(file_path.decode('UTF-8'))
 
+    #-------------- Indexing Samples folder -------------
+
+    # for each file, in each directory in Samples/ list the classes (directories) it belongs to...
+    def gen_index(self):
+        self.ready_to_index = (self.samplesDir != '')
+        if self.ready_to_index:
+            self.ids['indexProgress'].value=10
+
+            class_names = get_class_names(path=self.samplesDir) # list of subdirectories, which are the classes
+            print("class_names = ",class_names)
+            indexDict = dict()                                     # we'll use a dictionary to store names
+            for classname in class_names:                          # go through each directory
+                files_in_dir = listdir_nohidden(self.samplesDir+'/'+classname+'/')
+                for filename in files_in_dir:
+                    if filename in indexDict:
+                        indexDict[filename].append(classname)
+                    else:
+                        indexDict[filename] = [classname]
+            #print("indexDict = ",indexDict)
+            self.ids['indexProgress'].value=50
+
+            # ...and now somehow we save it as a CSV file...
+            self.indexFile = self.samplesDir+'/'+'IndexFile.csv'
+            with open(self.indexFile, 'w') as f:
+                print('#file, tags', file=f)
+                for key, tags in indexDict.items():
+                    tagString = ",".join(tags)
+                    print(key+","+tagString,file=f)
+                f.close()
+            self.ids['indexProgress'].value=100
+            self.ids['buildStatus'].text='Dataset index generated: '+self.indexFile
+            self.ids['indexFile'].text = self.indexFile
+            self.ids['indexGenButton'].state = 'down'
+            self.ids['indexSelectButton'].state = 'down'
 
     #-------------- Preprocessing --------------
 
@@ -461,7 +328,7 @@ class SHPanels(TabbedPanel):
         files_processed = count_files(folder)      # Folder should be Preproc
         percent = max(3, int(files_processed / self.totalClips * 100))
         self.ids['preprocProgress'].value = percent
-        self.ids['statusMsg'].text = str(files_processed)+"/"+str(self.totalClips)+" files processed ("+str(percent)+"%)"
+        self.ids['trainStatus'].text = str(files_processed)+"/"+str(self.totalClips)+" files processed ("+str(percent)+"%)"
         if (self.ids['preprocProgress'].value >= 99.4):  # finished
             self.ids['preprocButton'].state = "down"
             return False              # this just cancels the clock schedule
@@ -500,7 +367,7 @@ class SHPanels(TabbedPanel):
     def my_upload_callback(self, filename, size, sent):
         percent = min( 25 + int( float(sent)/float(size)*75),  100)  # start at 25%, go up to 100
         prog_str = 'Uploading progress: '+str(percent)+' %'
-        self.ids['statusMsg'].text = prog_str
+        self.ids['trainStatus'].text = prog_str
         barname = 'uploadProgress'
         self.ids[barname].value = percent
         if (percent >= 99):  # Finished
@@ -529,12 +396,12 @@ class SHPanels(TabbedPanel):
             files_to_be_processed = count_files(self.parentDir+PREPROC_DIR)
             percent = int( files_processed / files_to_be_processed * 100)
             self.ids['uploadProgress'].value = int(percent * .25)  # make 30% of the upload bar be the archiving
-            self.ids['statusMsg'].text = "Archiving... "+str(percent)+" %"
+            self.ids['trainStatus'].text = "Archiving... "+str(percent)+" %"
 
         if not thread.isAlive():           # archive process completed
             if (percent < 99):
                 print("  Warning: archive finished with less than 100% complete")
-            self.ids['statusMsg'].text = "Now Uploading..."
+            self.ids['trainStatus'].text = "Now Uploading..."
             completion()
             return False            # cancels scheduler
         return
@@ -546,7 +413,7 @@ class SHPanels(TabbedPanel):
             ((self.ids['preprocProgress'].value >= 99) or (0 == self.ids['preprocProgress'].value)) )  # don't allow upload in the middle of processing
         if not self.ready_to_upload:
             return
-        self.ids['statusMsg'].text = "Archiving "+PREPROC_DIR+"..."
+        self.ids['trainStatus'].text = "Archiving "+PREPROC_DIR+"..."
         cmd = 'cd '+self.parentDir+'; rm -f '+archive_path+';  tar cfz '+archive_path+' '+PREPROC_DIR
         orig_size = folder_size(self.parentDir+PREPROC_DIR)
         spawn(cmd, progress=partial(self.monitor_archive,archive_path,orig_size), interval=0.2, completion=partial(self.actual_upload,archive_path) )
@@ -556,7 +423,7 @@ class SHPanels(TabbedPanel):
 
     #-------------- Training --------------
     def train_is_complete(self,dst):
-        self.ids['statusMsg'].text = 'Training is complete!\nWeights file in '+dst
+        self.ids['trainStatus'].text = 'Training is complete!\nWeights file in '+dst
         self.ids['trainProgress'].value = 100
         self.ids['trainButton'].state = "down"
         self.sortWeightsFile = dst+'weights.hdf5'
@@ -577,13 +444,29 @@ class SHPanels(TabbedPanel):
 
     def monitor_train(self, thread, completion, t):
         self.ids['trainProgress'].value = 10   # TODO: find a way to keep track of training. length of log file?
+        # spawn a (blocking) process that checks the status of the training log file
+        cmd = "grep Epoch log.txt | grep / | tail -1 | awk '{print $2}'"
+        print("monitor_train: cmd = ",cmd)
+        p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        retval = p.wait()
+        if (0 == retval):
+            epochstr1 = p.stdout.readlines()[0]
+            epochstr2 = epochstr1.decode('UTF-8').replace('\n','')  # e.g. "12/20"
+            print("epochstr2 = ",epochstr2)
+            if (epochstr1 != '') and ('No such file' not in epochstr2):
+                try:
+                    epoch, maxepoch = map(int, epochstr2.split('/'))
+                    percent = epoch / maxepoch * 100
+                    self.ids['trainProgress'].value = percent
+                except:
+                    return
         if not thread.isAlive():
-            self.ids['statusMsg'].text = "Train thread finished.\nDownloading weights..."
+            self.ids['trainStatus'].text = "Train thread finished.\nDownloading weights..."
             completion()
             return False    # cancel schedule
 
     def change_train_status_msg(self,t):
-        self.ids['statusMsg'].text = "Training, please wait..."
+        self.ids['trainStatus'].text = "Training, please wait..."
 
     def train(self, barname, method='ssh'):
         self.ready_to_train = True#(self.ids['uploadProgress'].value >= 100)
@@ -605,7 +488,7 @@ class SHPanels(TabbedPanel):
             cmd += ' | tee log.txt"'
             print("Executing command cmd = [",cmd,"]")
 
-            spawn(cmd, progress=self.monitor_train, interval=1, completion=self.download_weights)
+            spawn(cmd, progress=self.monitor_train, interval=1.5, completion=self.download_weights)
             #p = subprocess.call(cmd, shell=True)   # blocking  TODO: make non-blocking
         elif ('http' == method):
             print("Yea, haven't done that yet")
@@ -705,7 +588,6 @@ class SortingHATApp(App):
         Window.size = (700, 400)
         self.icon = 'static/sorting-hat-logo.png'
         self.use_kivy_settings = False
-
         return SHPanels()
 
     def build_config(self, config):

@@ -64,7 +64,7 @@ def pullTags_one_file(file_list, new_main_folder, file_index):
                     tags = [tags]      # just make it a length-1 list
                 #print("               key = ",key,",   tags (list):")
                 for tag in tags:
-                    tag = re.sub('[^a-zA-Z\d\ ]|( ){2,}','-',tag )  # whitelist only certain characters. e.g. no "4/4"
+                    tag = re.sub('[^a-zA-Z\d\ ]|( ){2,}','_',tag )  # whitelist only certain characters. e.g. "4/4"->"4_4"
                     #tag = tag.replace("/", "-").replace(";", "-").replace("\\", "-").replace(" ", "_").replace
                     #print("                                                      [",tag,']',sep="")
                     if tag:              # guard against blank tags

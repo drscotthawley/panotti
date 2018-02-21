@@ -48,14 +48,23 @@ ARCHIVE_NAME = PREPROC_DIR+".tar.gz"
 REMOTE_RUN_DIR = "~/SortingHatRuns"
 SORTED_DIR = "Sorted"
 
-def count_files(folder):
+def count_files(folder, skip_csv=True):
     total = 0
     for root, dirs, files in os.walk(folder):
         files = [f for f in files if not f[0] == '.']     # ignore hidden files
+        if (skip_csv):
+            files = [f for f in files if not '.csv'==os.path.splitext(f)[1]]     # ignore csv
         dirs[:] = [d for d in dirs if not d[0] == '.']    # ignore hidden directories
         total += len(files)
     return total
 
+
+def file_len(filename):
+    count = 0
+    for l in open(filename):
+        if ('#' != l[0]):   # ignore comments
+            count +=1
+    return count
 
 def folder_size(path):   # get bytes
     total = 0
@@ -138,6 +147,7 @@ class SHPanels(TabbedPanel):
         self.ready_to_train = False
         self.sortFileList = []
         self.sortWeightsFile = ''
+        self.autoRunning = False
 
     def switch(self, tab, *args):   # panel switching
         self.switch_to(tab)
@@ -171,7 +181,7 @@ class SHPanels(TabbedPanel):
         # Test for completion:
         if not thread.isAlive():         # if the thread has completed
             if (percent >=100):          # Yay
-                completion()    # go on to the final state
+                Clock.schedule_once(lambda dt: completion(), 0.5)   # go on to the final state
             else:
                 print("\nError: Process died but progress < 100% ")
             return False                 # Either way, cancel the Kivy clock schedule
@@ -183,7 +193,7 @@ class SHPanels(TabbedPanel):
             time.sleep(0.01)
 
 
-    def start_prog_anim(self,barname):
+    def start_prog_anim(self, barname):
         self.ready_to_preproc = ('No folder selected' != self.ids['samplesDir'].text)
         self.ready_to_upload = (self.ids['preprocProgress'].value >= 100) and (self.ids['serverProgress'].value >= 100)
         self.ready_to_train = (self.ids['uploadProgress'].value >= 100) and (self.ready_to_upload)
@@ -232,8 +242,10 @@ class SHPanels(TabbedPanel):
             if ('' == self.samplesDir):
                 self.samplesDir =  os.path.dirname(self.indexFile)
                 self.parentDir =  str(Path(self.samplesDir).parent) + '/'
-                self.ids['indexFile'].text = self.indexFile
-                self.ids['indexSelectButton'].state = "down"
+            self.ids['indexFile'].text = self.indexFile
+            self.ids['indexSelectButton'].state = "down"
+            self.totalClips = file_len(self.indexFile)
+            self.ids['trainStatus'].text = "References "+str(self.totalClips)+" files"
         elif ('sort_weights' == origin_button):
             self.sortWeightsFile = filenames[0]
             self.ids['sortWeightsLabel'].text = self.sortWeightsFile
@@ -330,6 +342,16 @@ class SHPanels(TabbedPanel):
             self.ids['indexGenButton'].state = 'down'
             self.ids['indexSelectButton'].state = 'down'
 
+    #-------------- Auto Mode --------------
+    # calls all of the various steps in succession
+
+    def auto(self):
+        self.autoRunning = True
+        Clock.schedule_once(lambda dt: partial(self.start_prog_anim, 'serverProgress')(), 0)
+        self.preproc()
+        #Clock.schedule_once(lambda dt: self.preproc(), 0.1)
+        return
+
     #-------------- Preprocessing --------------
 
     def monitor_preproc(self, folder, thread, completion, dt):
@@ -337,12 +359,15 @@ class SHPanels(TabbedPanel):
         percent = max(3, int(files_processed / self.totalClips * 100))
         self.ids['preprocProgress'].value = percent
         self.ids['trainStatus'].text = str(files_processed)+"/"+str(self.totalClips)+" files processed ("+str(percent)+"%)"
-        if (self.ids['preprocProgress'].value >= 99.4):  # finished
+        if (self.ids['preprocProgress'].value >= 100):  # finished
             self.ids['preprocButton'].state = "down"
+            if (self.autoRunning):
+                #self.upload()
+                Clock.schedule_once(lambda dt: self.upload(), 1)    # call the next stage
             return False              # this just cancels the clock schedule
         return
 
-    def preproc(self,barname):
+    def preproc(self):
         if ('' != self.samplesDir) and ('' != self.parentDir):
             self.ready_to_preproc = True
         if not self.ready_to_preproc:
@@ -376,10 +401,12 @@ class SHPanels(TabbedPanel):
         percent = min( 25 + int( float(sent)/float(size)*75),  100)  # start at 25%, go up to 100
         prog_str = 'Uploading progress: '+str(percent)+' %'
         self.ids['trainStatus'].text = prog_str
-        barname = 'uploadProgress'
-        self.ids[barname].value = percent
+        self.ids['uploadProgress'].value = percent
         if (percent >= 99):  # Finished
             self.ids['uploadButton'].state = "down"
+            if (self.autoRunning):
+                Clock.schedule_once(lambda dt: self.train(), 1)    # call the next stage
+                self.autoRunning = False  # no more need after we call train
             return False    # kill the schedule
 
 
@@ -410,12 +437,12 @@ class SHPanels(TabbedPanel):
             if (percent < 99):
                 print("  Warning: archive finished with less than 100% complete")
             self.ids['trainStatus'].text = "Now Uploading..."
-            completion()
+            Clock.schedule_once(lambda dt: completion(), 0.5)
             return False            # cancels scheduler
         return
 
     # this actually initiates "archiving" (zip/tar) first, and THEN uploads
-    def upload(self,barname):
+    def upload(self):
         archive_path =  self.parentDir+PREPROC_DIR+'.tar.gz'
         self.ready_to_upload = (os.path.exists(self.parentDir+PREPROC_DIR) and (self.ids['serverProgress'].value >= 99) and
             ((self.ids['preprocProgress'].value >= 99) or (0 == self.ids['preprocProgress'].value)) )  # don't allow upload in the middle of processing
@@ -424,19 +451,20 @@ class SHPanels(TabbedPanel):
         self.ids['trainStatus'].text = "Archiving "+PREPROC_DIR+"..."
         cmd = 'cd '+self.parentDir+'; rm -f '+archive_path+';  tar cfz '+archive_path+' '+PREPROC_DIR
         orig_size = folder_size(self.parentDir+PREPROC_DIR)
-        spawn(cmd, progress=partial(self.monitor_archive,archive_path,orig_size), interval=0.2, completion=partial(self.actual_upload,archive_path) )
+        spawn(cmd, progress=partial(self.monitor_archive,archive_path,orig_size), interval=0.5, completion=partial(self.actual_upload,archive_path) )
 
         return
 
 
     #-------------- Training --------------
     def train_is_complete(self,dst):
-        self.ids['trainStatus'].text = 'Training is complete!\nWeights file in '+dst
+        self.ids['trainStatus'].text = '                   Training is complete!\nWeights file in '+dst
         self.ids['trainProgress'].value = 100
         self.ids['trainButton'].state = "down"
         self.sortWeightsFile = dst+'weights.hdf5'
         self.ids['sortWeightsLabel'].text = self.sortWeightsFile
         self.ids['sortWeightsButton'].state = 'down'
+        self.autoRunning = False
         return False    # cancel clock schedule
 
     def download_weights(self):
@@ -453,10 +481,10 @@ class SHPanels(TabbedPanel):
     def monitor_train(self, thread, completion, t):
         self.ids['trainProgress'].value = 10   # TODO: find a way to keep track of training. length of log file?
         # spawn a (blocking) process that checks the status of the training log file
-        cmd = "grep Epoch log.txt | grep / | tail -1 | awk '{print $2}'"
-        print("monitor_train: cmd = ",cmd)
-        p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        retval = p.wait()
+        #cmd = "grep Epoch log.txt | grep / | tail -1 | awk '{print $2}'"
+        #print("monitor_train: cmd = ",cmd)
+        #p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        retval = 1#p.wait()
         if (0 == retval):
             epochstr1 = p.stdout.readlines()[0]
             epochstr2 = epochstr1.decode('UTF-8').replace('\n','')  # e.g. "12/20"
@@ -470,24 +498,24 @@ class SHPanels(TabbedPanel):
                     return
         if not thread.isAlive():
             self.ids['trainStatus'].text = "Train thread finished.\nDownloading weights..."
-            completion()
+            Clock.schedule_once(lambda dt: completion(), 0.5)
             return False    # cancel schedule
 
     def change_train_status_msg(self,t):
         self.ids['trainStatus'].text = "Training, please wait..."
 
-    def train(self, barname, method='ssh'):
+    def train(self, method='ssh'):
         self.ready_to_train = True#(self.ids['uploadProgress'].value >= 100)
         if not self.ready_to_train:
             return
-        Clock.schedule_once(self.change_train_status_msg, 0.5)  # gotta delay by a bit to update the message
+        Clock.schedule_once(self.change_train_status_msg, 0)  # gotta delay by a bit to update the message
 
         self.server = whitelist_string( App.get_running_app().config.get('network', 'server') )
         self.username = whitelist_string( App.get_running_app().config.get('network', 'username') )
 
         if ('ssh' == method):
         # remote code execution via SSH server. could use sorting-hat HTTP server instead
-            cmd = 'ssh -t '+self.username+'@'+self.server+' "rm -rf '+PREPROC_DIR+'; tar xvfz '+ARCHIVE_NAME+';'
+            cmd = 'ssh -t '+self.username+'@'+self.server+' "rm -rf '+PREPROC_DIR+' log.txt; tar xfz '+ARCHIVE_NAME+';'
             if ('Random' == App.get_running_app().config.get('train', 'weightsOption')) and (self.ids['trainProgress'].value < 99):
                 cmd+= ' rm -f weights.hdf5;'   # reset weights if first time pressing the train button, otherwise reuse what's on the server
             cmd += ' ~/panotti/train_network.py'
@@ -495,9 +523,7 @@ class SHPanels(TabbedPanel):
             cmd += ' --val='+App.get_running_app().config.get('train','val_split')
             cmd += ' | tee log.txt"'
             print("Executing command cmd = [",cmd,"]")
-
             spawn(cmd, progress=self.monitor_train, interval=1.5, completion=self.download_weights)
-            #p = subprocess.call(cmd, shell=True)   # blocking  TODO: make non-blocking
         elif ('http' == method):
             print("Yea, haven't done that yet")
         else:

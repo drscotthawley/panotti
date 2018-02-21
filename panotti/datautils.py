@@ -5,18 +5,21 @@ from __future__ import print_function
 import numpy as np
 import librosa
 import os
-from os.path import isfile
+from os.path import isfile, splitext
 from imageio import imread, imwrite
 import glob
 
-def listdir_nohidden(path,subdirs_only=False):
+def listdir_nohidden(path,subdirs_only=False, skip_csv=True):
     '''
     ignore hidden files. call should be inside list().  subdirs_only means it ignores regular files
     '''
     for f in os.listdir(path):
-        if not f.startswith('.'):
-            if (False==subdirs_only) or (os.path.isdir(path+"/"+f)):
-                yield f
+        if not f.startswith('.'):     # this skips the hidden
+            if ((False==subdirs_only) or (os.path.isdir(path+"/"+f))):
+                if ('.csv' == os.path.splitext(f)[1]) and (skip_csv):
+                    pass
+                else:
+                    yield f
 
 
 # class names are subdirectory names in Preproc/ directory

@@ -22,7 +22,8 @@
             size: self.size
             pos: self.pos
 
-<ButtonWithState@Button>
+<ButtonWithState@Button>:
+    size_hint_x: 0.5
     background_color: 0,0,0,0  # the last zero is the critical on, make invisible
     canvas.before:
         Color:
@@ -100,66 +101,76 @@
                 text: "Status: Initial State"
                 center: self.parent.center
 
+
     CustomWidthTabb:
         id: trainPanel
         text: 'Train the Neural Net'
         BoxLayout:
             orientation: 'vertical'
             BoxLayout:
-                orientation: 'horizontal'
-                ButtonWithState:
-                    id: indexSelectButton
-                    text: 'Select Tag Index File'
-                    on_release: SH_widget.show_load('train')
-                ScrollView:
-                    Label:
-                        id: indexFile
-                        size_hint: None, 1
-                        size: self.texture_size
-                        text: '                                      No file selected                             '
-                        halign: 'center'
-                        valign: 'middle'
+                Button:
+                    text: 'Auto'
+                    size_hint_x: 0.25
+                    on_release: SH_widget.auto()
+                BoxLayout:
+                    orientation: 'vertical'
+                    BoxLayout:
+                        orientation: 'horizontal'
+                        ButtonWithState:
+                            id: indexSelectButton
+                            text: 'Select Tag Index File'
+                            on_release: SH_widget.show_load('train')
+                        ScrollView:
+                            Label:
+                                id: indexFile
+                                size_hint: None, 1
+                                size: self.texture_size
+                                text: '                                          No file selected               '
+                                halign: 'center'
+                                valign: 'middle'
 
-            BoxLayout:
-                orientation: 'horizontal'
-                ButtonWithState:
-                    text: "Start Server"
-                    id: serverButton
-                    on_release: root.start_prog_anim('serverProgress')
-                ProgressBar:
-                    id: serverProgress
-                    value: 0
-            BoxLayout:
-                orientation: 'horizontal'
-                ButtonWithState:
-                    id: preprocButton
-                    text: "Create Spectrograms"
-                    on_release: root.preproc('preprocProgress')
-                ProgressBar:
-                    id: preprocProgress
-                    value: 0
-            BoxLayout:
-                orientation: 'horizontal'
-                ButtonWithState:
-                    text: "Upload"
-                    id: uploadButton
-                    on_release: root.upload('uploadProgress')
-                ProgressBar:
-                    id: uploadProgress
-                    value: 0
-            BoxLayout:
-                orientation: 'horizontal'
-                ButtonWithState:
-                    text: "Train"
-                    id: trainButton
-                    on_release: root.train('trainProgress')
-                ProgressBar:
-                    id: trainProgress
-                    value: 0
+                    BoxLayout:
+                        orientation: 'horizontal'
+                        ButtonWithState:
+                            text: "Start Server"
+                            id: serverButton
+                            on_release: root.start_prog_anim('serverProgress')
+                        ProgressBar:
+                            id: serverProgress
+                            value: 0
+                    BoxLayout:
+                        orientation: 'horizontal'
+                        ButtonWithState:
+                            id: preprocButton
+                            text: "Create Spectrograms"
+                            on_release: root.preproc()
+                        ProgressBar:
+                            id: preprocProgress
+                            value: 0
+                    BoxLayout:
+                        orientation: 'horizontal'
+                        ButtonWithState:
+                            text: "Upload"
+                            id: uploadButton
+                            on_release: root.upload()
+                        ProgressBar:
+                            id: uploadProgress
+                            value: 0
+                    BoxLayout:
+                        orientation: 'horizontal'
+                        ButtonWithState:
+                            text: "Train"
+                            id: trainButton
+                            on_release: root.train()
+                        ProgressBar:
+                            id: trainProgress
+                            value: 0
             TextInputLikeLabel:
                 id: trainStatus
+                size_hint_y: 0.2
                 text: "Status: Initial State"
                 center: self.parent.center
+
 
     CustomWidthTabb:
         text: 'Sort Your Library'
@@ -193,6 +204,7 @@
                 size_hint_y: 0.3
                 text: "Status: Initial State"
                 center: self.parent.center
+
 
     CustomWidthTabb:
         id: settingsPanel

@@ -53,8 +53,9 @@
         BoxLayout:
             RstDocument:
                 text:
-                    '\\n'.join(("About", "-----------",
-                    "Sorting H.A.T.* - Organize your audio library with the help of neural nets.\\n",
+                    '\n'.join(("About\n", "-----------\n",
+                    "Sorting H.A.T. (Hosted Audio Tagger)\n",
+                    "Organize your audio library with the help of neural nets.\n",
                     "Built on `Panotti <http://github.com/drscotthawley/panotti>`_ by @drscotthawley"))
 
             Image:
@@ -68,7 +69,7 @@
 
     CustomWidthTabb:
         id: buildPanel
-        text: 'Build Your Dataset'
+        text: 'Build Your Training Set'
         BoxLayout:
             orientation: 'vertical'
             Label:
@@ -110,10 +111,15 @@
                     id: indexSelectButton
                     text: 'Select Tag Index File'
                     on_release: SH_widget.show_load('train')
-                Label:
-                    id: indexFile
-                    text: 'No file selected'
-                    size: self.texture_size
+                ScrollView:
+                    Label:
+                        id: indexFile
+                        size_hint: None, 1
+                        size: self.texture_size
+                        text: '                                      No file selected                             '
+                        halign: 'center'
+                        valign: 'middle'
+
             BoxLayout:
                 orientation: 'horizontal'
                 ButtonWithState:

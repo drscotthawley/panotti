@@ -12,7 +12,7 @@ Requirements:
     - Panotti on both local machine ("laptop") and server
     - Valid SSH login on server.  TODO: generalize from SSH to HTTP, or some AWS and/or Google Cloud APis
     $ pip install kivy kivy-garden scandir functools paramiko git+https://github.com/jbardin/scp.py.git
-    $ garden install filebrowser
+    $ garden install filebrowser scrolllabel
 
 ============
 '''
@@ -149,8 +149,6 @@ class SHPanels(TabbedPanel):
     def finished(self):
         print("\n\n*** Finished.")
 
-
-
     def count_to(self, maxval):   # this will be our test process
         print("Begin the counting, maxval = ",maxval)
         self.maxval = maxval
@@ -229,12 +227,20 @@ class SHPanels(TabbedPanel):
                 text = "Contains "+str(self.totalClips)+" files"
                 self.ids['buildStatus'].text = text
                 self.ids['samplesButton'].state = "down"
+        elif (self.current_tab == self.ids['trainPanel']):
+            self.indexFile = filenames[0]
+            if ('' == self.samplesDir):
+                self.samplesDir =  os.path.dirname(self.indexFile)
+                self.parentDir =  str(Path(self.samplesDir).parent) + '/'
+                self.ids['indexFile'].text = self.indexFile
+                self.ids['indexSelectButton'].state = "down"
         elif ('sort_weights' == origin_button):
             self.sortWeightsFile = filenames[0]
             self.ids['sortWeightsLabel'].text = self.sortWeightsFile
             self.ids['sortWeightsButton'].state = 'down'
         elif ('sort_files' == origin_button):#(self.current_tab == self.ids['sortPanel']):
-            '''  # removed sort files button because it was ambiguous
+            '''  # removed sort files button because of ambiguous/confusing filebrowser behavior.
+            # files to be sorted are now drag-only
             self.sortFileList = filenames
             self.ids['sortFilesDisplay'].text  = ''
             for name in filenames:
@@ -284,6 +290,8 @@ class SHPanels(TabbedPanel):
     def _on_file_drop(self, window, file_path):
         if (self.current_tab == self.ids['buildPanel']):
             self.got_filenames( [file_path.decode('UTF-8')], 'train_button' )
+        elif (self.current_tab == self.ids['trainPanel']):
+            self.got_filenames( [file_path.decode('UTF-8')], 'indexSelectButton' )
         elif (self.current_tab == self.ids['sortPanel']):
             self.consolidate_drops(file_path.decode('UTF-8'))
 

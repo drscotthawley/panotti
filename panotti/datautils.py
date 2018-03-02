@@ -132,12 +132,12 @@ def shuffle_XY_paths(X,Y,paths):   # generates a randomized order, keeping X&Y(&
         newpaths[i] = paths[idx[i]]
     return newX, newY, newpaths
 
-def make_melgram(mono_sig, sr):
+def make_melgram(mono_sig, sr, n_mels=96):   # @keunwoochoi used 96 mels in compact_cnn
     #melgram = librosa.logamplitude(librosa.feature.melspectrogram(mono_sig,  # latest librosa deprecated logamplitude in favor of amplitude_to_db
     #    sr=sr, n_mels=96),ref_power=1.0)[np.newaxis,np.newaxis,:,:]
 
     melgram = librosa.amplitude_to_db(librosa.feature.melspectrogram(mono_sig,
-        sr=sr, n_mels=96))[np.newaxis,np.newaxis,:,:]    # @keunwoochoi uses 96 mels
+        sr=sr, n_mels=n_mels))[np.newaxis,:,:,np.newaxis]     # last newaxis is b/c tensorflow wants 'channels_last' order
 
     '''
     # librosa docs also include a perceptual CQT example:
@@ -150,18 +150,18 @@ def make_melgram(mono_sig, sr):
 
 
 # turn multichannel audio as multiple melgram layers
-def make_layered_melgram(signal, sr):
+def make_layered_melgram(signal, sr, mels=96):
     if (signal.ndim == 1):      # given the way the preprocessing code is  now, this may not get called
         signal = np.reshape( signal, (1,signal.shape[0]))
 
     # get mel-spectrogram for each channel, and layer them into multi-dim array
     for channel in range(signal.shape[0]):
-        melgram = make_melgram(signal[channel],sr)
+        melgram = make_melgram(signal[channel],sr, n_mels=mels)
 
         if (0 == channel):
             layers = melgram
         else:
-            layers = np.append(layers,melgram,axis=1)  # we keep axis=0 free for keras batches
+            layers = np.append(layers,melgram,axis=3)  # we keep axis=0 free for keras batches, axis=3 means 'channels_last'
     return layers
 
 
@@ -170,7 +170,7 @@ def nearest_multiple( a, b ):   # returns number smaller than a, which is the ne
 
 
 # can be used for test dataset as well
-def build_dataset(path="Preproc/Train/", load_frac=1.0, batch_size=None):
+def build_dataset(path="Preproc/Train/", load_frac=1.0, batch_size=None, tile=False):
 
     class_names = get_class_names(path=path)
     print("class_names = ",class_names)
@@ -186,6 +186,10 @@ def build_dataset(path="Preproc/Train/", load_frac=1.0, batch_size=None):
 
     # pre-allocate memory for speed (old method used np.concatenate, slow)
     mel_dims = get_sample_dimensions(class_names,path=path)  # get dims of sample data file
+    if (tile):
+        ldims = list(mel_dims)
+        ldims[3] = 3
+        mel_dims = tuple(ldims)
     print(" melgram dimensions: ",mel_dims)
     X = np.zeros((total_load, mel_dims[1], mel_dims[2], mel_dims[3]))
     Y = np.zeros((total_load, nb_classes))
@@ -211,7 +215,9 @@ def build_dataset(path="Preproc/Train/", load_frac=1.0, batch_size=None):
 
             #auto-detect load method based on filename extension
             melgram = load_melgram(audio_path)
-            if (melgram.shape != mel_dims):
+            if (tile) and (melgram.shape != mel_dims):
+                melgram = np.tile(melgram, 3)
+            elif (melgram.shape != mel_dims):
                 print("\n\n    ERROR: mel_dims = ",mel_dims,", melgram.shape = ",melgram.shape)
             X[load_count,:,:] = melgram
             Y[load_count,:] = this_Y

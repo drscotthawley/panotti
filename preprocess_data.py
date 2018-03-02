@@ -45,7 +45,7 @@ def find_max_shape(path, mono=False, sr=None, dur=None, clean=False):
 
 
 def convert_one_file(printevery, class_index, class_files, nb_classes, classname, n_load, dirname, resample, mono,
-        already_split, n_train, outpath, subdir, max_shape, clean, out_format, file_index):
+        already_split, n_train, outpath, subdir, max_shape, clean, out_format, mels, file_index):
     infilename = class_files[file_index]
     audio_path = dirname + '/' + infilename
 
@@ -72,7 +72,7 @@ def convert_one_file(printevery, class_index, class_files, nb_classes, classname
     #print(",  use_shape = ",use_shape)
     padded_signal[:use_shape[0], :use_shape[1]] = signal[:use_shape[0], :use_shape[1]]
 
-    layers = make_layered_melgram(padded_signal, sr)
+    layers = make_layered_melgram(padded_signal, sr, mels=mels)
 
     if not already_split:
         if (file_index >= n_train):
@@ -89,7 +89,7 @@ def convert_one_file(printevery, class_index, class_files, nb_classes, classname
 
 
 def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0.8, resample=None, already_split=False,
-    sequential=False, mono=False, dur=None, clean=False, out_format='npy'):
+    sequential=False, mono=False, dur=None, clean=False, out_format='npy', mels=96):
 
     if (resample is not None):
         print(" Will be resampling at",resample,"Hz",flush=True)
@@ -157,11 +157,11 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
             if (not parallel):
                 for file_index in file_indices:    # loop over all files
                     convert_one_file(printevery, class_index, class_files, nb_classes, classname, n_load, dirname,
-                        resample, mono, already_split, n_train, outpath, subdir, max_shape, clean, out_format, file_index)
+                        resample, mono, already_split, n_train, outpath, subdir, max_shape, clean, out_format, mels, file_index)
             else:
                 pool = mp.Pool(cpu_count)
                 pool.map(partial(convert_one_file, printevery, class_index, class_files, nb_classes, classname, n_load, dirname,
-                    resample, mono, already_split, n_train, outpath, subdir, max_shape, clean, out_format), file_indices)
+                    resample, mono, already_split, n_train, outpath, subdir, max_shape, clean, out_format, mels), file_indices)
                 pool.close() # shut down the pool
 
 
@@ -181,6 +181,7 @@ if __name__ == '__main__':
     parser.add_argument('-f','--format', help="format of output file (npz, jpeg, png, etc). Default = npz", type=str, default='npz')
     parser.add_argument('-i','--inpath', help="input directory for audio samples (default='Samples')", type=str, default='Samples')
     parser.add_argument('-o','--outpath', help="output directory for spectrograms (default='Preproc')", type=str, default='Preproc')
+    parser.add_argument("--mels", help="number of mel coefficients to use in spectrograms", type=int, default=96)
 
     args = parser.parse_args()
     if (('Darwin' == platform.system()) and (not args.mono)):
@@ -193,4 +194,4 @@ if __name__ == '__main__':
         print("")
 
     preprocess_dataset(inpath=args.inpath+'/', outpath=args.outpath+'/', resample=args.resample, already_split=args.already, sequential=args.sequential, mono=args.mono,
-        dur=args.dur, clean=args.clean, out_format=args.format)
+        dur=args.dur, clean=args.clean, out_format=args.format, mels=args.mels)

@@ -1,5 +1,4 @@
 cython==0.27.3
-Kivy==1.10.0
 matplotlib==2.0.0
 imageio==2.2.0
 pygame==1.9.3

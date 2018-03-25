@@ -213,7 +213,7 @@ def setup_model(X, class_names, nb_layers=4, try_checkpoint=True,
 
     # don't bother with freezing layers, at least with the hope of trianing on a laptop. doesn't speed up by more than a factor of 2.
     # serial_model = freeze_layers(serial_model, train_last = 3)
-    
+
     # Initialize weights using checkpoint if it exists.
     if (try_checkpoint):
         print("Looking for previous weights...")
@@ -232,7 +232,7 @@ def setup_model(X, class_names, nb_layers=4, try_checkpoint=True,
     opt = 'adadelta' # Adam(lr = 0.00001)  # So far, adadelta seems to work the best of things I've tried
     metrics = ['accuracy']
 
-    if (multi_tag):     # multi_tag means more than one class can be 'chosen' at a time; default is 'only one' (ideally)
+    if (multi_tag):     # multi_tag means more than one class can be 'chosen' at a time; default is 'only one' 
         loss = 'binary_crossentropy'
     else:
         loss = 'categorical_crossentropy'
@@ -252,4 +252,4 @@ def setup_model(X, class_names, nb_layers=4, try_checkpoint=True,
         print("Summary of serial model (duplicated across",gpu_count,"GPUs):")
         serial_model.summary()  # print out the model layers
 
-    return model, serial_model   # fchollet says to hang out to the serial model for checkpointing
+    return model, serial_model   # fchollet says to hang on to the serial model for checkpointing

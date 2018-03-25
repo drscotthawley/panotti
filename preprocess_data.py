@@ -45,7 +45,7 @@ def find_max_shape(path, mono=False, sr=None, dur=None, clean=False):
 
 
 def convert_one_file(printevery, class_index, class_files, nb_classes, classname, n_load, dirname, resample, mono,
-        already_split, n_train, outpath, subdir, max_shape, clean, out_format, mels, file_index):
+        already_split, n_train, outpath, subdir, max_shape, clean, out_format, mels, phase, file_index):
     infilename = class_files[file_index]
     audio_path = dirname + '/' + infilename
 
@@ -72,7 +72,7 @@ def convert_one_file(printevery, class_index, class_files, nb_classes, classname
     #print(",  use_shape = ",use_shape)
     padded_signal[:use_shape[0], :use_shape[1]] = signal[:use_shape[0], :use_shape[1]]
 
-    layers = make_layered_melgram(padded_signal, sr, mels=mels)
+    layers = make_layered_melgram(padded_signal, sr, mels=mels, phase=phase)
 
     if not already_split:
         if (file_index >= n_train):
@@ -89,7 +89,7 @@ def convert_one_file(printevery, class_index, class_files, nb_classes, classname
 
 
 def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0.8, resample=None, already_split=False,
-    sequential=False, mono=False, dur=None, clean=False, out_format='npy', mels=96):
+    sequential=False, mono=False, dur=None, clean=False, out_format='npy', mels=96, phase=False):
 
     if (resample is not None):
         print(" Will be resampling at",resample,"Hz",flush=True)
@@ -125,10 +125,16 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
         os.mkdir( train_outpath );
         os.mkdir( test_outpath );
 
-    cpu_count = os.cpu_count()
-    print("",cpu_count,"CPUs detected: Parallel execution across",cpu_count,"CPUs",flush=True)
+    parallel = True     # set to false for debugging. when parallel jobs crash, usually no error messages are given, the system just hangs
+    if (parallel):
+        cpu_count = os.cpu_count()
+        print("",cpu_count,"CPUs detected: Parallel execution across",cpu_count,"CPUs",flush=True)
+    else:
+        cpu_count = 1
+        print("Serial execution",flush=True)
 
-    for subdir in sampleset_subdirs: #non-class subdirs of Samples (in case already split)
+
+    for subdir in sampleset_subdirs: #non-class subdirs of Samples (in case already split into Test/ Train; see above)
 
 
         for class_index, classname in enumerate(class_names):   # go through the classes
@@ -148,20 +154,18 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
             n_load = n_files            # sometimes we may multiple by a small # for debugging
             n_train = int( n_load * train_percentage)
 
-            printevery = 20
+            printevery = 20             # how often to output status messages when processing lots of files
 
             file_indices = tuple( range(len(class_files)) )
-            #logger = multiprocessing.log_to_stderr()
-            #logger.setLevel(multiprocessing.SUBDEBUG)
-            parallel = True     # set to false for debugging. when parallel jobs crash, usually no error messages are given, the system just hangs
+
             if (not parallel):
                 for file_index in file_indices:    # loop over all files
                     convert_one_file(printevery, class_index, class_files, nb_classes, classname, n_load, dirname,
-                        resample, mono, already_split, n_train, outpath, subdir, max_shape, clean, out_format, mels, file_index)
+                        resample, mono, already_split, n_train, outpath, subdir, max_shape, clean, out_format, mels, phase, file_index)
             else:
                 pool = mp.Pool(cpu_count)
                 pool.map(partial(convert_one_file, printevery, class_index, class_files, nb_classes, classname, n_load, dirname,
-                    resample, mono, already_split, n_train, outpath, subdir, max_shape, clean, out_format, mels), file_indices)
+                    resample, mono, already_split, n_train, outpath, subdir, max_shape, clean, out_format, mels, phase), file_indices)
                 pool.close() # shut down the pool
 
 
@@ -182,6 +186,7 @@ if __name__ == '__main__':
     parser.add_argument('-i','--inpath', help="input directory for audio samples (default='Samples')", type=str, default='Samples')
     parser.add_argument('-o','--outpath', help="output directory for spectrograms (default='Preproc')", type=str, default='Preproc')
     parser.add_argument("--mels", help="number of mel coefficients to use in spectrograms", type=int, default=96)
+    parser.add_argument("--phase", help="Include phase information as extra channels", action='store_true')
 
     args = parser.parse_args()
     if (('Darwin' == platform.system()) and (not args.mono)):
@@ -194,4 +199,4 @@ if __name__ == '__main__':
         print("")
 
     preprocess_dataset(inpath=args.inpath+'/', outpath=args.outpath+'/', resample=args.resample, already_split=args.already, sequential=args.sequential, mono=args.mono,
-        dur=args.dur, clean=args.clean, out_format=args.format, mels=args.mels)
+        dur=args.dur, clean=args.clean, out_format=args.format, mels=args.mels, phase=args.phase)

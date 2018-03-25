@@ -132,7 +132,7 @@ def shuffle_XY_paths(X,Y,paths):   # generates a randomized order, keeping X&Y(&
         newpaths[i] = paths[idx[i]]
     return newX, newY, newpaths
 
-def make_melgram(mono_sig, sr, n_mels=96):   # @keunwoochoi used 96 mels in compact_cnn
+def make_melgram(mono_sig, sr, n_mels=128):   # @keunwoochoi upgraded form 96 to 128 mel bins in kapre
     #melgram = librosa.logamplitude(librosa.feature.melspectrogram(mono_sig,  # latest librosa deprecated logamplitude in favor of amplitude_to_db
     #    sr=sr, n_mels=96),ref_power=1.0)[np.newaxis,np.newaxis,:,:]
 
@@ -148,9 +148,18 @@ def make_melgram(mono_sig, sr, n_mels=96):   # @keunwoochoi used 96 mels in comp
     '''
     return melgram
 
+def make_phase_gram(mono_sig, sr, n_bins=128):
+    stft = librosa.stft(mono_sig)#, n_fft = (2*n_bins)-1)
+    magnitude, phase = librosa.magphase(stft)   # we don't need magnitude
+
+    # resample the phase array to match n_bins
+    phase = np.resize(phase, (n_bins, phase.shape[1]))[np.newaxis,:,:,np.newaxis]
+    return phase
+
+
 
 # turn multichannel audio as multiple melgram layers
-def make_layered_melgram(signal, sr, mels=96):
+def make_layered_melgram(signal, sr, mels=128, phase=False):
     if (signal.ndim == 1):      # given the way the preprocessing code is  now, this may not get called
         signal = np.reshape( signal, (1,signal.shape[0]))
 
@@ -162,6 +171,10 @@ def make_layered_melgram(signal, sr, mels=96):
             layers = melgram
         else:
             layers = np.append(layers,melgram,axis=3)  # we keep axis=0 free for keras batches, axis=3 means 'channels_last'
+
+        if (phase):
+            phasegram = make_phase_gram(signal[channel],sr, n_bins=mels)
+            layers = np.append(layers,phasegram,axis=3)
     return layers
 
 

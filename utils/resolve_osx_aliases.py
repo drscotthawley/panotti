@@ -10,17 +10,15 @@
 #
 # Python port modified from https://hints.macworld.com/article.php?story=20021024064107356
 #
-# Requirements: osascript (AppleScript), platform, subprocess
+# Requirements: osascript (AppleScript), platform, subprocess, shlex
 #
-# TODO: - make it work in parallel
-#       - security upgrade: shell call will allow untrusted execution if 'path' contains ';'', etc.
+# TODO: - could make it work in parallel when mutliple filenames are given
 #
 # NOTE: By default, this only returns the names of the original source files,
 #       but if you set convert=True, it will also convert aliases to symbolic links.
 #
-import subprocess
-import platform
-import os
+import subprocess, platform, os, shlex
+
 
 # returns true if a file is an OSX alias, false otherwise
 def isAlias(path, already_checked_os=False):
@@ -37,7 +35,8 @@ def isAlias(path, already_checked_os=False):
     line_7='end if'
     line_8='end tell'
     cmd = "osascript -e '"+line_1+"' -e '"+line_2+"' -e '"+line_3+"' -e '"+line_4+"' -e '"+line_5+"' -e '"+line_6+"' -e '"+line_7+"' -e '"+line_8+"'"
-    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    args = shlex.split(cmd)              # shlex splits cmd up appropriately so we can call subprocess.Popen with shell=False (better security)
+    p = subprocess.Popen(args, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     retval = p.wait()
     if (0 == retval):
         line = p.stdout.readlines()[0]
@@ -66,10 +65,11 @@ def resolve_osx_alias(path, already_checked_os=False, convert=False):        # s
     line_7 ='end if'
     line_8 ='end tell'
     cmd = "osascript -e '"+line_1+"' -e '"+line_2+"' -e '"+line_3+"' -e '"+line_4+"' -e '"+line_5+"' -e '"+line_6+"' -e '"+line_7+"' -e '"+line_8+"'"
-    p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    args = shlex.split(cmd)              # shlex splits cmd up appropriately so we can call subprocess.Popen with shell=False (better security)
+    p = subprocess.Popen(args, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     retval = p.wait()
     if (0 == retval):
-        line = p.stdout.readlines()[0]        
+        line = p.stdout.readlines()[0]
         source = line.decode('UTF-8').replace('\n','')
         if (convert):
             os.remove(checkpath)

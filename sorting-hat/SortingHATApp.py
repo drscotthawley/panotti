@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 '''
-SortingHatApp  - Desktop version of Sorting H.A.T. program.
+SortingHatApp  - Desktop version of Sorting H.A.T. program.  This is just a prototype; not intended for general use yet. 
 
 Author: Scott H. Hawley @drscotthawley
 

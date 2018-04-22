@@ -7,6 +7,7 @@ from __future__ import print_function
 import numpy as np
 from panotti.datautils import *
 import librosa
+import librosa.display
 from audioread import NoBackendError
 import os
 from PIL import Image
@@ -29,7 +30,7 @@ def find_max_shape(path, mono=False, sr=None, dur=None, clean=False):
     shapes = []
     for dirname, dirnames, filenames in os.walk(path):
         for filename in filenames:
-            if not filename.startswith('.'):    # ignore hidden files
+            if not (filename.startswith('.') or ('.csv' in filename)):    # ignore hidden files & CSVs
                 filepath = os.path.join(dirname, filename)
                 try:
                     signal, sr = librosa.load(filepath, mono=mono, sr=sr)

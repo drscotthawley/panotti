@@ -14,7 +14,8 @@
 #  and enable ../panotti/datautils.py, etc to read them.
 
 import os
-from multiprocessing import Pool
+#from multiprocessing.pool import ThreadPool as Pool
+from multiprocessing.pool import Pool
 import numpy as np
 from functools import partial
 from scipy.misc import imsave

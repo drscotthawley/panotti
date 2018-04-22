@@ -219,7 +219,7 @@ def build_dataset(path="Preproc/Train/", load_frac=1.0, batch_size=None, tile=Fa
         printevery = 100
 
         file_list = class_files[0:n_load]
-        for idx2, infilename in enumerate(file_list):
+        for idx2, infilename in enumerate(file_list):   # Load files in a particular class
             audio_path = path + classname + '/' + infilename
             if (0 == idx2 % printevery) or (idx2+1 == len(class_files)):
                 print("\r Loading class ",idx+1,"/",nb_classes,": \'",classname,
@@ -238,6 +238,10 @@ def build_dataset(path="Preproc/Train/", load_frac=1.0, batch_size=None, tile=Fa
             load_count += 1
             if (load_count >= total_load):   # Abort loading files after last even multiple of batch size
                 break
+
+        if (load_count >= total_load):   # Second break needed to get out of loop over classes
+            break
+
 
     print("")
     if ( load_count != total_load ):  # check to make sure we loaded everything we thought we would

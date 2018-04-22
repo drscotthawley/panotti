@@ -14,7 +14,8 @@
 #  and enable ../panotti/datautils.py, etc to read them.
 
 import os
-from multiprocessing import Pool
+#from multiprocessing.pool import ThreadPool as Pool
+from multiprocessing.pool import Pool
 import numpy as np
 from functools import partial
 from scipy.misc import imsave
@@ -26,8 +27,12 @@ def convert_one_file(file_list, out_format, mono, file_index):
         if ('.npz' == extension) or ('.npy' == extension):
             outfile = basename+"."+out_format
             print("    Operating on file",infile,", converting to ",outfile)
-            arr = np.load(infile)
-            channels = arr.shape[1]
+            if ('.npz' == extension):
+                with np.load(infile) as data:
+                    arr = data['melgram']
+            else:
+                    arr = np.load(infile)
+            channels = arr.shape[-1]
             if (channels <= 4):
                 #arr = np.reshape(arr, (arr.shape[2],arr.shape[3]))
                 arr = np.moveaxis(arr, 1, 3).squeeze()      # we use the 'channels_first' in tensorflow, but images have channels_first. squeeze removes unit-size axes

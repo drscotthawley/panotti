@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1275605.svg)](https://doi.org/10.5281/zenodo.1275605)
+
 # Panotti: A Convolutional Neural Network classifier for multichannel audio waveforms
 
 <img src="https://upload.wikimedia.org/wikipedia/commons/a/af/Panoteanen.jpg" alt="Panotti image" height="200">

@@ -8,6 +8,8 @@
 
 This is a version of the [audio-classifier-keras-cnn](https://github.com/drscotthawley/audio-classifier-keras-cnn) repo (which is a hack of **@keunwoochoi**'s compact_cnn code).  Difference with Panotti is, it has been generalized beyond mono audio, to include stereo or even more "channels."  And it's undergone many refinements.
 
+*NOTE: The  majority of issues people seem to have in using this utility, stem from inconsistencies in their audio datasets. This is to the point where I hesitate to delve into such reports. I suggest trying the binaural audio example and see if your same problems arise.  However, a latest Keras update may have broken the channel-ordering, and I'll work on that.* -SH
+
 
 ## Installation 
 

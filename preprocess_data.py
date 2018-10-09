@@ -7,7 +7,6 @@ from __future__ import print_function
 import numpy as np
 from panotti.datautils import *
 import librosa
-import librosa.display
 from audioread import NoBackendError
 import os
 from PIL import Image

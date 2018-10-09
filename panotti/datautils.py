@@ -8,6 +8,8 @@ import os
 from os.path import isfile, splitext
 from imageio import imread, imwrite
 import glob
+from skimage import img_as_ubyte
+
 
 def listdir_nohidden(path,subdirs_only=False, skip_csv=True):
     '''
@@ -39,21 +41,25 @@ def get_total_files(class_names, path="Preproc/Train/"):
         sum_total += n_files
     return sum_total
 
+def scale_to_uint8(float_img):
+    #out_img = 255*(float_img - np.min(float_img))/np.ptp(float_img).astype(np.uint8)
+    out_img = img_as_ubyte( (float_img-np.min(float_img))/np.ptp(float_img) )
+    return out_img
+
 def save_melgram(outfile, melgram, out_format='npz'):
-    channels = melgram.shape[1]
+    channels = melgram.shape[3]
     melgram = melgram.astype(np.float16)
     if (('jpeg' == out_format) or ('png' == out_format)) and (channels <=4):
         melgram = np.moveaxis(melgram, 1, 3).squeeze()      # we use the 'channels_first' in tensorflow, but images have channels_first. squeeze removes unit-size axes
         melgram = np.flip(melgram, 0)    # flip spectrogram image right-side-up before saving, for viewing
-        #print("first melgram.shape = ",melgram.shape,end="")
         if (2 == channels): # special case: 1=greyscale, 3=RGB, 4=RGBA, ..no 2.  so...?
             # pad a channel of zeros (for blue) and you'll just be stuck with it forever. so channels will =3
             # TODO: this is SLOWWW
             b = np.zeros((melgram.shape[0], melgram.shape[1], 3))  # 3-channel array of zeros
             b[:,:,:-1] = melgram                          # fill the zeros on the 1st 2 channels
-            imwrite(outfile, b, format=out_format)
+            imwrite(outfile, scale_to_uint8(b), format=out_format)
         else:
-            imwrite(outfile, melgram, format=out_format)
+            imwrite(outfile, scale_to_uint8(melgram), format=out_format)
     elif ('npy' == out_format):
         np.save(outfile,melgram=melgram)
     else:

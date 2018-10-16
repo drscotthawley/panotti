@@ -1,3 +1,4 @@
+
 '''
 datautils.py:  Just some routines that we use for moving data around
 '''
@@ -50,7 +51,8 @@ def save_melgram(outfile, melgram, out_format='npz'):
     channels = melgram.shape[3]
     melgram = melgram.astype(np.float16)
     if (('jpeg' == out_format) or ('png' == out_format)) and (channels <=4):
-        melgram = np.moveaxis(melgram, 1, 3).squeeze()      # we use the 'channels_first' in tensorflow, but images have channels_first. squeeze removes unit-size axes
+        melgram = np.squeeze(melgram)  # squeeze gets rid of dimensions of batch_size 1
+        #melgram = np.moveaxis(melgram, 1, 3).squeeze()      # we use the 'channels_first' in tensorflow, but images have channels_first. squeeze removes unit-size axes
         melgram = np.flip(melgram, 0)    # flip spectrogram image right-side-up before saving, for viewing
         if (2 == channels): # special case: 1=greyscale, 3=RGB, 4=RGBA, ..no 2.  so...?
             # pad a channel of zeros (for blue) and you'll just be stuck with it forever. so channels will =3
@@ -94,10 +96,11 @@ def load_melgram(file_path):
             melgram = data['melgram']
     elif ('.png' == extension) or ('.jpeg' == extension):
         arr = imread(file_path)
-        melgram = np.reshape(arr, (1,1,arr.shape[0],arr.shape[1]))  # convert 2-d image
+        melgram = np.reshape(arr, (1,arr.shape[0],arr.shape[1],1))  # convert 2-d image
         melgram = np.flip(melgram, 0)     # we save images 'rightside up' but librosa internally presents them 'upside down'
     else:
         print("load_melgram: Error: unrecognized file extension '",extension,"' for file ",file_path,sep="")
+    #print("melgram.shape = ",melgram.shape)
     return melgram
 
 

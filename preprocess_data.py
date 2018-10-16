@@ -179,7 +179,7 @@ if __name__ == '__main__':
     parser.add_argument("-s", "--sequential", help="don't randomly shuffle data for train/test split",action="store_true")
     parser.add_argument("-m", "--mono", help="convert input audio to mono",action="store_true")
     parser.add_argument("-r", "--resample", type=int, default=44100, help="convert input audio to mono")
-    parser.add_argument('-d', "--dur",  type=float, default=None,   help='Max duration (in seconds) of each clip')
+    parser.add_argument('-d', "--dur",  type=float, default=3,   help='Max duration (in seconds) of each clip. Default = 3s')
     parser.add_argument('-c', "--clean", help="Assume 'clean data'; Do not check to find max shape (faster)", action='store_true')
     parser.add_argument('-f','--format', help="format of output file (npz, jpeg, png, etc). Default = npz", type=str, default='npz')
     parser.add_argument('-i','--inpath', help="input directory for audio samples (default='Samples')", type=str, default='Samples')

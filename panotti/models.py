@@ -60,7 +60,7 @@ def MyCNN_Keras2(X_shape, nb_classes, nb_layers=4):
     model.add(Activation('elu'))
     model.add(Dropout(dl_dropout))
     model.add(Dense(nb_classes))
-    model.add(Activation("softmax",,name="Output"))
+    model.add(Activation("softmax",name="Output"))
     return model
 
 

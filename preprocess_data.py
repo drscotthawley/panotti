@@ -44,7 +44,7 @@ def find_max_shape(path, mono=False, sr=None, dur=None, clean=False):
 
 
 def convert_one_file(printevery, class_index, class_files, nb_classes, classname, n_load, dirname, resample, mono,
-        already_split, n_train, outpath, subdir, max_shape, clean, out_format, mels, phase, file_index):
+        already_split, nosplit, n_train, outpath, subdir, max_shape, clean, out_format, mels, phase, file_index):
     infilename = class_files[file_index]
     audio_path = dirname + '/' + infilename
 
@@ -73,11 +73,13 @@ def convert_one_file(printevery, class_index, class_files, nb_classes, classname
 
     layers = make_layered_melgram(padded_signal, sr, mels=mels, phase=phase)
 
-    if not already_split:
+    if not already_split and (not nosplit):
         if (file_index >= n_train):
             outsub = "Test/"
         else:
             outsub = "Train/"
+    elif nosplit:
+        outsub = ""
     else:
         outsub = subdir
 
@@ -88,7 +90,7 @@ def convert_one_file(printevery, class_index, class_files, nb_classes, classname
 
 
 def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0.8, resample=None, already_split=False,
-    sequential=False, mono=False, dur=None, clean=False, out_format='npy', mels=96, phase=False):
+    nosplit=False, sequential=False, mono=False, dur=None, clean=False, out_format='npy', mels=96, phase=False):
 
     if (resample is not None):
         print(" Will be resampling at",resample,"Hz",flush=True)
@@ -97,6 +99,10 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
         print(" Data is already split into Train & Test",flush=True)
         class_names = get_class_names(path=inpath+"Train/")   # get the names of the subdirectories
         sampleset_subdirs = ["Train/","Test/"]
+    elif nosplit:
+        print(" All files output to same directory",flush=True)
+        class_names = get_class_names(path=inpath)   # get the names of the subdirectories
+        sampleset_subdirs = ["./"]
     else:
         print(" Will be imposing 80-20 (Train-Test) split",flush=True)
         class_names = get_class_names(path=inpath)   # get the names of the subdirectories
@@ -117,12 +123,20 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
     nb_classes = len(class_names)
     print("",len(class_names),"classes.  class_names = ",class_names,flush=True)
 
-    train_outpath = outpath+"Train/"
-    test_outpath = outpath+"Test/"
+    if nosplit:
+        train_outpath = outpath
+        test_outpath = outpath
+    else:
+        train_outpath = outpath+"Train/"
+        test_outpath = outpath+"Test/"
     if not os.path.exists(outpath):
         os.mkdir( outpath );   # make a new directory for preproc'd files
-        os.mkdir( train_outpath );
-        os.mkdir( test_outpath );
+        if not nosplit:
+            os.mkdir( train_outpath );
+            os.mkdir( test_outpath );
+    else:
+        train_outpath = outpath
+        test_outpath = outpath
 
     parallel = True     # set to false for debugging. when parallel jobs crash, usually no error messages are given, the system just hangs
     if (parallel):
@@ -141,8 +155,10 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
 
             # make new Preproc/ subdirectories for class
             if not os.path.exists(train_outpath+classname):
+                print("Making directory ",train_outpath+classname)
                 os.mkdir( train_outpath+classname );
-                os.mkdir( test_outpath+classname );
+                if not nosplit:
+                    os.mkdir( test_outpath+classname );
             dirname = inpath+subdir+classname
             class_files = list(listdir_nohidden(dirname))   # all filenames for this class, skip hidden files
             class_files.sort()
@@ -160,11 +176,11 @@ def preprocess_dataset(inpath="Samples/", outpath="Preproc/", train_percentage=0
             if (not parallel):
                 for file_index in file_indices:    # loop over all files
                     convert_one_file(printevery, class_index, class_files, nb_classes, classname, n_load, dirname,
-                        resample, mono, already_split, n_train, outpath, subdir, max_shape, clean, out_format, mels, phase, file_index)
+                        resample, mono, already_split, nosplit, n_train, outpath, subdir, max_shape, clean, out_format, mels, phase, file_index)
             else:
                 pool = mp.Pool(cpu_count)
                 pool.map(partial(convert_one_file, printevery, class_index, class_files, nb_classes, classname, n_load, dirname,
-                    resample, mono, already_split, n_train, outpath, subdir, max_shape, clean, out_format, mels, phase), file_indices)
+                    resample, mono, already_split, nosplit, n_train, outpath, subdir, max_shape, clean, out_format, mels, phase), file_indices)
                 pool.close() # shut down the pool
 
 
@@ -178,6 +194,8 @@ if __name__ == '__main__':
     parser.add_argument("-a", "--already", help="data is already split into Test & Train (default is to add 80-20 split",action="store_true")
     parser.add_argument("-s", "--sequential", help="don't randomly shuffle data for train/test split",action="store_true")
     parser.add_argument("-m", "--mono", help="convert input audio to mono",action="store_true")
+    parser.add_argument("-n", "--nosplit", help="do not create any Train/Test split in output (everything to same directory)",action="store_true")
+
     parser.add_argument("-r", "--resample", type=int, default=44100, help="convert input audio to mono")
     parser.add_argument('-d', "--dur",  type=float, default=3,   help='Max duration (in seconds) of each clip. Default = 3s')
     parser.add_argument('-c', "--clean", help="Assume 'clean data'; Do not check to find max shape (faster)", action='store_true')
@@ -198,4 +216,4 @@ if __name__ == '__main__':
         print("")
 
     preprocess_dataset(inpath=args.inpath+'/', outpath=args.outpath+'/', resample=args.resample, already_split=args.already, sequential=args.sequential, mono=args.mono,
-        dur=args.dur, clean=args.clean, out_format=args.format, mels=args.mels, phase=args.phase)
+        nosplit=args.nosplit, dur=args.dur, clean=args.clean, out_format=args.format, mels=args.mels, phase=args.phase)

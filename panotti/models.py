@@ -43,7 +43,7 @@ def MyCNN_Keras2(X_shape, nb_classes, nb_layers=4):
     print(" MyCNN_Keras2: X_shape = ",X_shape,", channels = ",X_shape[3])
     input_shape = (X_shape[1], X_shape[2], X_shape[3])
     model = Sequential()
-    model.add(Conv2D(nb_filters, kernel_size, padding='valid', input_shape=input_shape))
+    model.add(Conv2D(nb_filters, kernel_size, padding='valid', input_shape=input_shape, name="Input"))
     model.add(BatchNormalization(axis=1))
     model.add(Activation('relu'))        # Leave this relu & BN here.  ELU is not good here (my experience)
 
@@ -60,7 +60,7 @@ def MyCNN_Keras2(X_shape, nb_classes, nb_layers=4):
     model.add(Activation('elu'))
     model.add(Dropout(dl_dropout))
     model.add(Dense(nb_classes))
-    model.add(Activation("softmax"))
+    model.add(Activation("softmax",,name="Output"))
     return model
 
 
@@ -232,7 +232,7 @@ def setup_model(X, class_names, nb_layers=4, try_checkpoint=True,
     opt = 'adadelta' # Adam(lr = 0.00001)  # So far, adadelta seems to work the best of things I've tried
     metrics = ['accuracy']
 
-    if (multi_tag):     # multi_tag means more than one class can be 'chosen' at a time; default is 'only one' 
+    if (multi_tag):     # multi_tag means more than one class can be 'chosen' at a time; default is 'only one'
         loss = 'binary_crossentropy'
     else:
         loss = 'categorical_crossentropy'

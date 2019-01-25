@@ -240,8 +240,13 @@ def build_dataset(path="Preproc/Train/", load_frac=1.0, batch_size=None, tile=Fa
             if (tile) and (melgram.shape != mel_dims):
                 melgram = np.tile(melgram, 3)
             elif (melgram.shape != mel_dims):
-                print("\n\n    ERROR: mel_dims = ",mel_dims,", melgram.shape = ",melgram.shape)
-            X[load_count,:,:] = melgram
+                print("\n\n    WARNING: Expecting spectrogram with dimensions mel_dims = ",mel_dims,", but got one with melgram.shape = ",melgram.shape)
+                print("     The offending file is = ",audio_path)
+
+            # usually it's the 2nd dimension of melgram.shape that is affected by audio file length
+            use_len = min(X.shape[2],melgram.shape[2])
+            X[load_count,:,0:use_len] = melgram[:,:,0:use_len]
+            #X[load_count,:,:] = melgram
             Y[load_count,:] = this_Y
             paths.append(audio_path)
             load_count += 1

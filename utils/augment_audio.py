@@ -31,7 +31,7 @@ def augment_audio(y, sr, n_augment = 0, allow_speedandpitch = True, allow_pitch 
     for i in range(n_augment):
         if not quiet:
             print(tab+"augment_audio: ",i+1,"of",n_augment)
-        y_mod = y
+        y_mod = y.copy()
         count_changes = 0
 
         # change speed and pitch together

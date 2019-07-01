@@ -119,15 +119,12 @@ def convert_one_file(
         shape != signal.shape
     ):  # this only evals to true for mono
         signal = np.reshape(signal, shape)
-        # print("...reshaped mono so new shape = ",signal.shape, end="")
-    # print(",  max_shape = ",max_shape,end="")
     padded_signal = np.zeros(
         max_shape
     )  # (previously found max_shape) allocate a long signal of zeros
     use_shape = list(max_shape[:])
     use_shape[0] = min(shape[0], max_shape[0])
     use_shape[1] = min(shape[1], max_shape[1])
-    # print(",  use_shape = ",use_shape)
     padded_signal[: use_shape[0], : use_shape[1]] = signal[
         : use_shape[0], : use_shape[1]
     ]

@@ -14,7 +14,7 @@ import numpy as np
 from panotti.models import setup_model
 from panotti.datautils import build_dataset
 
-from keras.callbacks import EarlyStopping
+# from keras.callbacks import EarlyStopping
 from panotti.multi_gpu import MultiGPUModelCheckpoint
 
 
@@ -59,7 +59,7 @@ def train_network(
         verbose=1,
         callbacks=[checkpointer],
         validation_split=val_split,
-    )  # validation_data=(X_val, Y_val),
+    )
 
     # Score the model against Test dataset
     X_test, Y_test, paths_test, class_names_test = build_dataset(
@@ -79,13 +79,13 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "-w",
-        "--weights",  # nargs=1, type=argparse.FileType('r'),
+        "--weights",
         help="weights file in hdf5 format",
         default="weights.hdf5",
     )
     parser.add_argument(
         "-c",
-        "--classpath",  # type=argparse.string,
+        "--classpath",
         help="Train dataset directory with list of classes",
         default="Preproc/Train/",
     )

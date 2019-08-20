@@ -1,5 +1,4 @@
 #! /usr/bin/env python3
-
 '''
 Classify sounds using database
 Author: Scott H. Hawley
@@ -11,8 +10,10 @@ Trained using Fraunhofer IDMT's database of monophonic guitar effects,
    clips were 2 seconds long, sampled at 44100 Hz
 '''
 from __future__ import print_function
+import sys
+print(sys.path)
+print(sys.version)
 import numpy as np
-import librosa
 from panotti.models import *
 from panotti.datautils import *
 #from keras.callbacks import ModelCheckpoint #,EarlyStopping
@@ -38,6 +39,10 @@ def train_network(weights_file="weights.hdf5", classpath="Preproc/Train/", epoch
 
     model.fit(X_train, Y_train, batch_size=batch_size, epochs=epochs, shuffle=True,
           verbose=1, callbacks=[checkpointer], validation_split=val_split)  # validation_data=(X_val, Y_val),
+
+    # overwrite text file class_names.txt  - does not put a newline after last class name
+    with open('class_names.txt', 'w') as outfile:
+        outfile.write("\n".join(class_names))
 
     # Score the model against Test dataset
     X_test, Y_test, paths_test, class_names_test  = build_dataset(path=classpath+"../Test/", tile=tile)

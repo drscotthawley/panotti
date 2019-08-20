@@ -43,16 +43,17 @@ def MyCNN_Keras2(X_shape, nb_classes, nb_layers=4):
     print(" MyCNN_Keras2: X_shape = ",X_shape,", channels = ",X_shape[3])
     input_shape = (X_shape[1], X_shape[2], X_shape[3])
     model = Sequential()
-    model.add(Conv2D(nb_filters, kernel_size, padding='valid', input_shape=input_shape, name="Input"))
-    model.add(BatchNormalization(axis=1))
+    model.add(Conv2D(nb_filters, kernel_size, padding='same', input_shape=input_shape, name="Input"))
+    model.add(MaxPooling2D(pool_size=pool_size))
     model.add(Activation('relu'))        # Leave this relu & BN here.  ELU is not good here (my experience)
+    model.add(BatchNormalization(axis=1))
 
     for layer in range(nb_layers-1):   # add more layers than just the first
-        model.add(Conv2D(nb_filters, kernel_size))
-        #model.add(BatchNormalization(axis=1))  # ELU authors reccommend no BatchNorm. I confirm.
-        model.add(Activation('elu'))
+        model.add(Conv2D(nb_filters, kernel_size, padding='same'))
         model.add(MaxPooling2D(pool_size=pool_size))
+        model.add(Activation('elu'))
         model.add(Dropout(cl_dropout))
+        #model.add(BatchNormalization(axis=1))  # ELU authors reccommend no BatchNorm. I confirm.
 
     model.add(Flatten())
     model.add(Dense(128))            # 128 is 'arbitrary' for now

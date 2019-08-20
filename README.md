@@ -46,9 +46,9 @@ I'm not shipping this with any audio but you can generate some for the 'fake bin
     cd examples
     ./binaural_setup.sh
     cd binaural
+    ../../preprocess_data.py --dur=2 --clean
     ../../train_network.py
 
-*Check out the new user-friendly server mode, Sorting H.A.T., in folder sorting-hat/!*
 
 ## Quick Start
 * Make a folder called `Samples/` and inside it create sub-folders with the names of each category you want to train on. Place your audio files in these sub-folders accordingly. 

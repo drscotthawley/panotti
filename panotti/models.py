@@ -48,7 +48,7 @@ def MyCNN_Keras2(X_shape, nb_classes, nb_layers=4):
     model.add(Conv2D(nb_filters, kernel_size, padding='same', input_shape=input_shape, name="Input"))
     model.add(MaxPooling2D(pool_size=pool_size))
     model.add(Activation('relu'))        # Leave this relu & BN here.  ELU is not good here (my experience)
-    model.add(BatchNormalization(axis=-1))  # axis=1 for 'channels_last'
+    model.add(BatchNormalization(axis=-1))  # axis=1 for 'channels_first'; but tensorflow preferse channels_last (axis=-1)
 
     for layer in range(nb_layers-1):   # add more layers than just the first
         model.add(Conv2D(nb_filters, kernel_size, padding='same'))

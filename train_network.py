@@ -25,92 +25,10 @@ from panotti.mixup_generator import MixupGenerator
 import math
 
 
-
-def lr_sched(epoch):
-    initial_rate = 0.5
-    max_rate = 2.5
-    epochs = 200
-    b = epochs/3.0
-    if epoch < b:
-      lrate = initial_rate + (max_rate - initial_rate)/b*epoch
-    else:
-      lrate = max_rate*(1+np.cos((epoch-b)/(epochs-b)*np.pi))/2+1e-5
-    return lrate
-
-
-def get_1cycle_schedule(lr_max=1e-3, n_data_points=8000, epochs=200, batch_size=40, verbose=0):
-  """
-  Creates a look-up table of learning rates for 1cycle schedule with cosine annealing
-  See @sgugger's & @jeremyhoward's code in fastai library: https://github.com/fastai/fastai/blob/master/fastai/train.py
-  Wrote this to use with my Keras and (non-fastai-)PyTorch codes.
-  Note that in Keras, the LearningRateScheduler callback (https://keras.io/callbacks/#learningratescheduler) only operates once per epoch, not per batch
-      So see below for Keras callback
-
-  Keyword arguments:
-    lr_max            chosen by user after lr_finder
-    n_data_points     data points per epoch (e.g. size of training set)
-    epochs            number of epochs
-    batch_size        batch size
-  Output:
-    lrs               look-up table of LR's, with length equal to total # of iterations
-  Then you can use this in your PyTorch code by counting iteration number and setting
-          optimizer.param_groups[0]['lr'] = lrs[iter_count]
-  """
-  if verbose > 0:
-    print("Setting up 1Cycle LR schedule...")
-  pct_start, div_factor = 0.3, 10.
-  lr_start = lr_max/div_factor
-  lr_end = lr_start/1e4
-  n_iter = n_data_points * epochs // batch_size     # number of iterations
-  a1 = int(n_iter * pct_start)
-  a2 = n_iter - a1
-
-  # make look-up table
-  lrs_first = np.linspace(lr_start, lr_max, a1)            # linear growth
-  lrs_second = (lr_max-lr_end)*(1+np.cos(np.linspace(0,np.pi,a2)))/2 + lr_end  # cosine annealing
-  lrs = np.concatenate((lrs_first, lrs_second))
-  return lrs
-
-
-from keras.callbacks import Callback
-import keras.backend as K
-
-class OneCycleScheduler(Callback):
-    """My modification of Keras' Learning rate scheduler to do 1Cycle learning
-       which increments per BATCH, not per epoch
-    Keyword arguments
-        **kwargs:  keyword arguments to pass to get_1cycle_schedule()
-        Also, verbose: int. 0: quiet, 1: update messages.
-
-    Sample usage (from my train.py):
-        lrsched = OneCycleScheduler(lr_max=1e-4, n_data_points=X_train.shape[0], epochs=epochs, batch_size=batch_size, verbose=1)
-    """
-    def __init__(self, **kwargs):
-        super(OneCycleScheduler, self).__init__()
-        self.verbose = kwargs.get('verbose', 0)
-        self.lrs = get_1cycle_schedule(**kwargs)
-        self.iteration = 0
-
-    def on_batch_begin(self, batch, logs=None):
-        lr = self.lrs[self.iteration]
-        K.set_value(self.model.optimizer.lr, lr)         # here's where the assignment takes place
-        if self.verbose > 0:
-            print('\nIteration %06d: OneCycleScheduler setting learning '
-                  'rate to %s.' % (self.iteration, lr))
-        self.iteration += 1
-
-    def on_epoch_end(self, epoch, logs=None):  # this is unchanged from Keras LearningRateScheduler
-        logs = logs or {}
-        logs['lr'] = K.get_value(self.model.optimizer.lr)
-
-
-
-
-
-
 def train_network(weights_file="weights.hdf5", classpath="Preproc/Train/",
     epochs=50, batch_size=20, val_split=0.2, tile=False, max_per_class=0):
-    #np.random.seed(1)  # fix a number to get reproducibility
+
+    np.random.seed(1)  # fix a number to get reproducibility; comment out for random behavior
 
     # Get the data
     X_train, Y_train, paths_train, class_names = build_dataset(path=classpath,
@@ -125,15 +43,8 @@ def train_network(weights_file="weights.hdf5", classpath="Preproc/Train/",
     X_val, Y_val = X_train[split_index:], Y_train[split_index:]
     X_train, Y_train = X_train[:split_index-1], Y_train[:split_index-1]
 
-    # shrink to simulate a small number of examples
-    #new_size = len(class_names)*10
-    #X_train, Y_train = X_train[:new_size], Y_train[:new_size]
-
     checkpointer = MultiGPUModelCheckpoint(filepath=weights_file, verbose=1, save_best_only=save_best_only,
           serial_model=serial_model, period=1, class_names=class_names)
-    #earlystopping = EarlyStopping(patience=12)
-    #lr_scheduler = keras.callbacks.LearningRateScheduler(lr_sched, verbose=0)
-    #lr_scheduler = OneCycleScheduler(lr_max=5e-3, n_data_points=X_train.shape[0], epochs=epochs, batch_size=batch_size, verbose=0)
 
     steps_per_epoch = X_train.shape[0] // batch_size
     if (len(class_names) > 2) or (steps_per_epoch > 1):

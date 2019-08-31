@@ -9,6 +9,7 @@ Where we'll put various NN models.
 MyCNN:  This is kind of a mixture of Keun Woo Choi's code https://github.com/keunwoochoi/music-auto_tagging-keras
    and the MNIST classifier at https://github.com/fchollet/keras/blob/master/examples/mnist_cnn.py
 '''
+from keras import backend as K
 import keras
 import tensorflow as tf
 from keras.models import Sequential, Model, load_model, save_model
@@ -23,6 +24,7 @@ from panotti.multi_gpu import *
 from tensorflow.python.client import device_lib
 from panotti.multi_gpu import make_parallel, get_available_gpus
 import h5py
+
 
 # This is a VGG-style network that I made by 'dumbing down' @keunwoochoi's compact_cnn code
 # I have not attempted much optimization, however it *is* fairly understandable
@@ -46,7 +48,7 @@ def MyCNN_Keras2(X_shape, nb_classes, nb_layers=4):
     model.add(Conv2D(nb_filters, kernel_size, padding='same', input_shape=input_shape, name="Input"))
     model.add(MaxPooling2D(pool_size=pool_size))
     model.add(Activation('relu'))        # Leave this relu & BN here.  ELU is not good here (my experience)
-    model.add(BatchNormalization(axis=1))
+    model.add(BatchNormalization(axis=-1))  # axis=1 for 'channels_last'
 
     for layer in range(nb_layers-1):   # add more layers than just the first
         model.add(Conv2D(nb_filters, kernel_size, padding='same'))
@@ -231,6 +233,7 @@ def setup_model(X, class_names, nb_layers=4, try_checkpoint=True,
 
 
     opt = 'adadelta' # Adam(lr = 0.00001)  # So far, adadelta seems to work the best of things I've tried
+    #opt = 'adam'
     metrics = ['accuracy']
 
     if (multi_tag):     # multi_tag means more than one class can be 'chosen' at a time; default is 'only one'

@@ -1,8 +1,14 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1275605.svg)](https://doi.org/10.5281/zenodo.1275605)
+
 # Panotti: A Convolutional Neural Network classifier for multichannel audio waveforms
 
-<img src="https://upload.wikimedia.org/wikipedia/commons/a/af/Panoteanen.jpg" alt="Panotti image" height="200">*(Image of large-eared Panotti people, Wikipedia)*
+<img src="https://upload.wikimedia.org/wikipedia/commons/a/af/Panoteanen.jpg" alt="Panotti image" height="200">
+<i>(Image of large-eared Panotti people, Wikipedia)</i><br>
+
 
 This is a version of the [audio-classifier-keras-cnn](https://github.com/drscotthawley/audio-classifier-keras-cnn) repo (which is a hack of **@keunwoochoi**'s compact_cnn code).  Difference with Panotti is, it has been generalized beyond mono audio, to include stereo or even more "channels."  And it's undergone many refinements.
+
+*NOTE: The  majority of issues people seem to have in using this utility, stem from inconsistencies in their audio datasets. This is to the point where I hesitate to delve into such reports. I suggest trying the binaural audio example and see if your same problems arise.* -SH
 
 
 ## Installation 
@@ -40,9 +46,9 @@ I'm not shipping this with any audio but you can generate some for the 'fake bin
     cd examples
     ./binaural_setup.sh
     cd binaural
+    ../../preprocess_data.py --dur=2 --clean
     ../../train_network.py
 
-*Check out the new user-friendly server mode, Sorting H.A.T., in folder sorting-hat/!*
 
 ## Quick Start
 * Make a folder called `Samples/` and inside it create sub-folders with the names of each category you want to train on. Place your audio files in these sub-folders accordingly. 

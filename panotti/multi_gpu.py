@@ -1,7 +1,7 @@
 from keras.layers import concatenate
 from keras.layers.core import Lambda
 from keras.models import Model
-from keras.utils.training_utils import multi_gpu_model
+from keras.utils import multi_gpu_model
 from keras.callbacks import Callback, ModelCheckpoint
 import tensorflow as tf
 from tensorflow.python.client import device_lib

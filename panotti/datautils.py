@@ -10,6 +10,7 @@ from os.path import isfile, splitext
 from imageio import imread, imwrite
 import glob
 from skimage import img_as_ubyte
+from random import shuffle
 
 
 def listdir_nohidden(path,subdirs_only=False, skip_csv=True):
@@ -113,11 +114,17 @@ def get_sample_dimensions(class_names, path='Preproc/Train/'):
     return melgram.shape
 
 
-def encode_class(class_name, class_names):  # makes a "one-hot" vector for each class name called
+def encode_class(class_name, class_names, label_smoothing=0.005):
+# makes a "one-hot" vector for each class name called
+#  label_smoothing is a parameter to make the training more robust to mislabeled data
     try:
         idx = class_names.index(class_name)
-        vec = np.zeros(len(class_names))
+        num_classes = len(class_names)
+        vec = np.zeros(num_classes)
         vec[idx] = 1
+
+        if label_smoothing > 0:
+            vec = vec * (1 - label_smoothing) + label_smoothing / num_classes
         return vec
     except ValueError:
         return None
@@ -192,7 +199,7 @@ def nearest_multiple( a, b ):   # returns number smaller than a, which is the ne
 
 
 # can be used for test dataset as well
-def build_dataset(path="Preproc/Train/", load_frac=1.0, batch_size=None, tile=False):
+def build_dataset(path="Preproc/Train/", load_frac=1.0, batch_size=None, tile=False, max_per_class=0):
 
     class_names = get_class_names(path=path)
     print("class_names = ",class_names)
@@ -200,8 +207,13 @@ def build_dataset(path="Preproc/Train/", load_frac=1.0, batch_size=None, tile=Fa
 
     total_files = get_total_files(class_names, path=path)
     total_load = int(total_files * load_frac)
+
+    if max_per_class > 0:
+        total_load = min( total_load, max_per_class * nb_classes)
+
     if (batch_size is not None):                # keras gets particular: dataset size must be mult. of batch_size
         total_load = nearest_multiple( total_load, batch_size)
+
     print("       total files = ",total_files,", going to load total_load = ",total_load)
 
     print("total files = ",total_files,", going to load total_load = ",total_load)
@@ -223,11 +235,15 @@ def build_dataset(path="Preproc/Train/", load_frac=1.0, batch_size=None, tile=Fa
         this_Y = np.array(encode_class(classname,class_names) )
         this_Y = this_Y[np.newaxis,:]
         class_files = os.listdir(path+classname)
+        shuffle(class_files)  # just to remove any special ordering
         n_files = len(class_files)
         n_load =  int(n_files * load_frac)   # n_load is how many files of THIS CLASS are expected to be loaded
+        if max_per_class > 0:
+            n_load = min( n_load, max_per_class)
         printevery = 100
 
         file_list = class_files[0:n_load]
+
         for idx2, infilename in enumerate(file_list):   # Load files in a particular class
             audio_path = path + classname + '/' + infilename
             if (0 == idx2 % printevery) or (idx2+1 == len(class_files)):

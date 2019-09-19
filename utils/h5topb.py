@@ -16,7 +16,6 @@ from tensorflow.python.saved_model import tag_constants
 # In order to use Tensorflow on a CPU, you need channels_last, regardless of your ~/.keras/keras.json settings
 K.set_image_data_format('channels_last')
 
-
 def export_h5_to_pb(path_to_h5, export_path):
 
     # Set the learning phase to Test since the model is already trained.

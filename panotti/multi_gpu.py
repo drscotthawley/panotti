@@ -60,7 +60,7 @@ class MultiGPUModelCheckpoint(Callback):
 
     def __init__(self, filepath, monitor='val_loss', verbose=0,
                  save_best_only=False, save_weights_only=False,
-                 mode='auto', period=1, serial_model=None, class_names=None)# , pb=False):
+                 mode='auto', period=1, serial_model=None, class_names=None):# , pb=False):
         super(MultiGPUModelCheckpoint, self).__init__()
         self.monitor = monitor
         self.verbose = verbose

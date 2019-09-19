@@ -55,7 +55,7 @@ def MyCNN_Keras2(X_shape, nb_classes, nb_layers=4):
         model.add(MaxPooling2D(pool_size=pool_size))
         model.add(Activation('elu'))
         model.add(Dropout(cl_dropout))
-        #model.add(BatchNormalization(axis=1))  # ELU authors reccommend no BatchNorm. I confirm.
+        #model.add(BatchNormalization(axis=-1))  # ELU authors reccommend no BatchNorm. I confirm.
 
     model.add(Flatten())
     model.add(Dense(128))            # 128 is 'arbitrary' for now
@@ -79,7 +79,7 @@ def old_model(X_shape, nb_classes, nb_layers=4):  # original model used in repro
     model = Sequential()
     model.add(Conv2D(nb_filters, kernel_size, padding='valid', input_shape=input_shape))
 
-    model.add(BatchNormalization(axis=1))
+    model.add(BatchNormalization(axis=-1))
     model.add(Activation('relu'))
 
     for layer in range(nb_layers-1):

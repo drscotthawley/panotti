@@ -47,7 +47,7 @@ def train_network(weights_file="weights.hdf5", classpath="Preproc/Train/",
           serial_model=serial_model, period=1, class_names=class_names)
 
     steps_per_epoch = X_train.shape[0] // batch_size
-    if (len(class_names) > 2) or (steps_per_epoch > 1):
+    if False and ((len(class_names) > 2) or (steps_per_epoch > 1)):
         training_generator = MixupGenerator(X_train, Y_train, batch_size=batch_size, alpha=0.25)()
         model.fit_generator(generator=training_generator, steps_per_epoch=steps_per_epoch,
               epochs=epochs, shuffle=True,

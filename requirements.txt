@@ -12,4 +12,4 @@ Pillow>=5.0.0
 pypandoc>=1.4
 scikit_learn>=0.19.1
 winshell>=0.6
-scikit-image>=0.14.1
+scikit-image>=0.14.2

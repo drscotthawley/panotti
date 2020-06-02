@@ -24,9 +24,9 @@ from panotti.multi_gpu import MultiGPUModelCheckpoint
 from panotti.mixup_generator import MixupGenerator
 import math
 
-
 def train_network(weights_file="weights.hdf5", classpath="Preproc/Train/",
-    epochs=50, batch_size=20, val_split=0.2, tile=False, max_per_class=0):
+    epochs=50, batch_size=20, val_split=0.2, tile=False, max_per_class=0,
+    k_fold=1):
 
     np.random.seed(1)  # fix a number to get reproducibility; comment out for random behavior
 
@@ -34,28 +34,40 @@ def train_network(weights_file="weights.hdf5", classpath="Preproc/Train/",
     X_train, Y_train, paths_train, class_names = build_dataset(path=classpath,
         batch_size=batch_size, tile=tile, max_per_class=max_per_class)
 
-    # Instantiate the model
-    model, serial_model = setup_model(X_train, class_names, weights_file=weights_file)
-
     save_best_only = (val_split > 1e-6)
+    assert k_fold  <= 1/val_split   # make sure we don't repeat folds
 
-    split_index = int(X_train.shape[0]*(1-val_split))
-    X_val, Y_val = X_train[split_index:], Y_train[split_index:]
-    X_train, Y_train = X_train[:split_index-1], Y_train[:split_index-1]
+    for k in range(k_fold):
 
-    checkpointer = MultiGPUModelCheckpoint(filepath=weights_file, verbose=1, save_best_only=save_best_only,
-          serial_model=serial_model, period=1, class_names=class_names)
+        # Instantiate the model
+        model, serial_model = setup_model(X_train, class_names,
+            weights_file=weights_file, quiet=(k!=0))
 
-    steps_per_epoch = X_train.shape[0] // batch_size
-    if False and ((len(class_names) > 2) or (steps_per_epoch > 1)):
-        training_generator = MixupGenerator(X_train, Y_train, batch_size=batch_size, alpha=0.25)()
-        model.fit_generator(generator=training_generator, steps_per_epoch=steps_per_epoch,
-              epochs=epochs, shuffle=True,
-              verbose=1, callbacks=[checkpointer], validation_data=(X_val, Y_val))
-    else:
-        model.fit(X_train, Y_train, batch_size=batch_size, epochs=epochs, shuffle=True,
-              verbose=1, callbacks=[checkpointer], #validation_split=val_split)
-              validation_data=(X_val, Y_val))
+        # Split between Training and Validation Set, val_split = percentage to use for val
+        split_index = int(X_train.shape[0]*(1-val_split))   # Train first, Val second
+        X_val, Y_val = X_train[split_index:], Y_train[split_index:]
+        X_train, Y_train = X_train[:split_index], Y_train[:split_index]
+
+        # if we're doing k-folding cross-val, don't overwrite the weights file until the last time
+        callbacks = None if (k < k_fold-1) else [MultiGPUModelCheckpoint(filepath=weights_file, verbose=1, save_best_only=save_best_only,
+              serial_model=serial_model, period=1, class_names=class_names)]
+
+        steps_per_epoch = X_train.shape[0] // batch_size
+        if False and ((len(class_names) > 2) or (steps_per_epoch > 1)):
+            training_generator = MixupGenerator(X_train, Y_train, batch_size=batch_size, alpha=0.25)()
+            model.fit_generator(generator=training_generator, steps_per_epoch=steps_per_epoch,
+                  epochs=epochs, shuffle=True,
+                  verbose=1, callbacks=callbacks, validation_data=(X_val, Y_val))
+        else:
+            model.fit(X_train, Y_train, batch_size=batch_size, epochs=epochs, shuffle=True,
+                  verbose=1, callbacks=callbacks, #validation_split=val_split)
+                  validation_data=(X_val, Y_val))
+
+        if k < k_fold-1: # reconstitute and re-split the data for the next loop
+            print("\n\n------ Starting another round of cross-validation, for k =",k+2,"/",k_fold,"------")
+            X_train = np.concatenate((X_val, X_train))  # stick the val at the front this time
+            Y_train = np.concatenate((Y_val, Y_train))
+
 
     # overwrite text file class_names.txt  - does not put a newline after last class name
     with open('class_names.txt', 'w') as outfile:
@@ -81,6 +93,9 @@ if __name__ == '__main__':
     parser.add_argument('--val', default=0.2, type=float, help="Fraction of train to split off for validation")
     parser.add_argument("--tile", help="tile mono spectrograms 3 times for use with imagenet models",action="store_true")
     parser.add_argument('-m', '--maxper', type=int, default=0, help="Max examples per class")
+    parser.add_argument('-k', '--kfold', type=int, default=1, help="Enable k-fold cross-validation (max = 1/val)")
+
     args = parser.parse_args()
-    train_network(weights_file=args.weights, classpath=args.classpath, epochs=args.epochs, batch_size=args.batch_size,
-        val_split=args.val, tile=args.tile, max_per_class=args.maxper)
+    train_network(weights_file=args.weights, classpath=args.classpath, epochs=args.epochs,
+        batch_size=args.batch_size, val_split=args.val, tile=args.tile, max_per_class=args.maxper,
+        k_fold=args.kfold)

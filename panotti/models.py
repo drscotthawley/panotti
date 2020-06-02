@@ -26,9 +26,10 @@ from panotti.multi_gpu import make_parallel, get_available_gpus
 import h5py
 
 
+
 # This is a VGG-style network that I made by 'dumbing down' @keunwoochoi's compact_cnn code
 # I have not attempted much optimization, however it *is* fairly understandable
-def MyCNN_Keras2(X_shape, nb_classes, nb_layers=4):
+def Panotti_CNN(X_shape, nb_classes, nb_layers=4):
     # Inputs:
     #    X_shape = [ # spectrograms per batch, # audio channels, # spectrogram freq bins, # spectrogram time bins ]
     #    nb_classes = number of output n_classes
@@ -64,76 +65,6 @@ def MyCNN_Keras2(X_shape, nb_classes, nb_layers=4):
     model.add(Dropout(dl_dropout))
     model.add(Dense(nb_classes))
     model.add(Activation("softmax",name="Output"))
-    return model
-
-
-def old_model(X_shape, nb_classes, nb_layers=4):  # original model used in reproducing Stein et al
-    from keras import backend as K
-    K.set_image_data_format('channels_first')   # old model used channels_first, new one uses channels_last. see make_melgram utils in datautils.py
-
-    nb_filters = 32  # number of convolutional filters to use
-    pool_size = (2, 2)  # size of pooling area for max pooling
-    kernel_size = (3, 3)  # convolution kernel size
-    input_shape = (X_shape[1], X_shape[2], X_shape[3])
-
-    model = Sequential()
-    model.add(Conv2D(nb_filters, kernel_size, padding='valid', input_shape=input_shape))
-
-    model.add(BatchNormalization(axis=-1))
-    model.add(Activation('relu'))
-
-    for layer in range(nb_layers-1):
-        model.add(Convolution2D(nb_filters, kernel_size))
-        #model.add(BatchNormalization(axis=1))
-        #model.add(ELU(alpha=1.0))
-        model.add(Activation('elu'))
-        model.add(MaxPooling2D(pool_size=pool_size))
-        model.add(Dropout(0.25))
-
-    model.add(Flatten())
-    model.add(Dense(64))
-    model.add(Activation('elu'))
-    #model.add(ELU(alpha=1.0))
-    model.add(Dropout(0.5))
-    model.add(Dense(nb_classes))
-    model.add(Activation("softmax"))
-    return model
-
-
-# Note: haven't gotten imagenet models to work...pretty much at all, they get stuck around 50% accuracy.
-# Routine for other image classifier models   TODO: Training gets stuck at very high losses. Not sure why
-def imageModels(X, nb_classes, weights=None):
-    # Note these all require exactly 3 input channels.
-    from keras.applications import Xception, VGG16
-    from keras.applications.inception_v3 import InceptionV3
-    from keras.applications.nasnet import NASNetLarge, NASNetMobile
-    from keras.applications.inception_resnet_v2 import InceptionResNetV2
-    from keras.utils.generic_utils import CustomObjectScope
-    from keras.applications.mobilenet import MobileNet, DepthwiseConv2D
-
-    weights = 'imagenet'    # Could resize images to, e.g. 224 x 224 and then use weights='imagenet'.
-                            # Need to use --mels=224 --dur=2.6s with preprocess_data.py   and --tile with train_network.
-
-    input_shape = X.shape[1:]
-    print("input_shape = ",input_shape)
-    if False and (3 != input_shape[0]):   # then we're going to add a front end that gives us 3 channels
-        front_end = Input(shape=input_shape)
-        front_end = Conv2D(3, (3,3), padding='valid', input_shape=input_shape, activation='relu')(front_end)
-        input_shape = (X.shape[1], X.shape[2], 3)    # and now we'll set input_shape as the rest of the network wants
-    else:
-        front_end = Input(shape=input_shape)
-    #base_model = NASNetMobile(input_shape=input_shape, weights=weights, include_top=False, input_tensor=front_end)
-    with CustomObjectScope({'relu6': keras.applications.mobilenet.relu6, 'DepthwiseConv2D': keras.applications.mobilenet.DepthwiseConv2D}):
-        base_model = MobileNet(input_shape=input_shape, weights=weights, include_top=False, input_tensor=front_end, dropout=0.6)
-    #base_model = Xception(input_shape=X[0].shape, weights=weights, include_top=False, input_tensor=front_end)
-
-    top_model = Sequential()        # top_model gets tacked on to pretrained model
-    top_model.add(Flatten(input_shape=base_model.output_shape[1:]))
-    top_model.add(Dense(128))            # 128 is 'arbitrary' for now
-    top_model.add(Dense(nb_classes,name='FinalOutput'))      # Final output layer
-
-    #top_model.load_weights('bootlneck_fc_model.h5')
-    model = Model(inputs= base_model.input, outputs= top_model(base_model.output))
     return model
 
 
@@ -210,9 +141,7 @@ def setup_model(X, class_names, nb_layers=4, try_checkpoint=True,
     '''
 
     # Here's where one might 'swap out' different neural network 'model' choices
-    serial_model = MyCNN_Keras2(X.shape, nb_classes=len(class_names), nb_layers=nb_layers)
-    #serial_model = old_model(X.shape, nb_classes=len(class_names), nb_layers=nb_layers)
-    #serial_model = imageModels(X, nb_classes=len(class_names))
+    serial_model = Panotti_CNN(X.shape, nb_classes=len(class_names), nb_layers=nb_layers)
 
     # don't bother with freezing layers, at least with the hope of trianing on a laptop. doesn't speed up by more than a factor of 2.
     # serial_model = freeze_layers(serial_model, train_last = 3)

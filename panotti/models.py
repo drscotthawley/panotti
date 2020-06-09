@@ -9,15 +9,17 @@ Where we'll put various NN models.
 MyCNN:  This is kind of a mixture of Keun Woo Choi's code https://github.com/keunwoochoi/music-auto_tagging-keras
    and the MNIST classifier at https://github.com/fchollet/keras/blob/master/examples/mnist_cnn.py
 '''
-from keras import backend as K
-import keras
+#from tensorflow.keras import backend as K
+from tensorflow.keras import backend as K
+
+#import keras
 import tensorflow as tf
-from keras.models import Sequential, Model, load_model, save_model
-from keras.layers import Input, Dense, TimeDistributed, LSTM, Dropout, Activation
-from keras.layers import Convolution2D, MaxPooling2D, Flatten, Conv2D
-from keras.layers.normalization import BatchNormalization
-from keras.layers.advanced_activations import ELU
-from keras.optimizers import SGD, Adam
+from tensorflow.keras.models import Sequential, Model, load_model, save_model
+from tensorflow.keras.layers import Input, Dense, TimeDistributed, LSTM, Dropout, Activation
+from tensorflow.keras.layers import Convolution2D, MaxPooling2D, Flatten, Conv2D
+from tensorflow.keras.layers import BatchNormalization
+from tensorflow.keras.layers import ELU
+from tensorflow.keras.optimizers import SGD, Adam
 
 from os.path import isfile
 from panotti.multi_gpu import *
@@ -34,7 +36,7 @@ def Panotti_CNN(X_shape, nb_classes, nb_layers=4):
     #    X_shape = [ # spectrograms per batch, # audio channels, # spectrogram freq bins, # spectrogram time bins ]
     #    nb_classes = number of output n_classes
     #    nb_layers = number of conv-pooling sets in the CNN
-    from keras import backend as K
+    from tensorflow.keras import backend as K
     K.set_image_data_format('channels_last')                   # SHH changed on 3/1/2018 b/c tensorflow prefers channels_last
 
     nb_filters = 32  # number of convolutional filters = "feature maps"

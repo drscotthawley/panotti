@@ -13,6 +13,8 @@ This is a version of the [audio-classifier-keras-cnn](https://github.com/drscott
 
 ## Installation 
 
+*UPDATE June 9, 2020: There is an updated version of Panotti that works with TensorFlow 2, currently in the panotti branch called 'tf2'.  I'm not ready to merge that branch with master until [Vibrary](https://github.com/artandlogic/vibrary) is also updated for TF2.*
+
 ### Preface: Requirements
 Probably Mac OS X or Linux. (Windows users: I have no experience to offer you.)
 Not everything is required, here's a overview:

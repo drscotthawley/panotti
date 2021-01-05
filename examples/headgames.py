@@ -299,5 +299,4 @@ if __name__ == "__main__":
     if (not os.path.isfile(weights_file)):
         print("Error, can't find weights file "+weights_file)
         sys.exit(1)
-    #TODO: First check for existence of files we need: binaural/, binaural/Samples, binaural/weights.hdf5
     do_pygame(n_az=n_az, weights_file=weights_file, wavpath=wavpath)

@@ -1,4 +1,6 @@
 cff-version: '1.1.0'
+date-released: 04-06-2018
+version: 1.0.0
 message: 'Please cite the following works when using this software.'
 authors:
   - family-names: 'Hawley'

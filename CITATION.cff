@@ -1,0 +1,13 @@
+cff-version: '1.1.0'
+message: 'Please cite the following works when using this software.'
+authors:
+  - family-names: 'Hawley'
+    given-names: 'Scott H.'
+doi: '10.5281/zenodo.1275605'
+identifiers:
+  - type: 'doi'
+    value: '10.5281/zenodo.1275605'
+  - type: 'url'
+    value: 'https://github.com/drscotthawley/panotti'
+title: 'Panotti: A Convolutional Neural Network Classifier for Multichannel Audio Waveforms'
+url: 'https://github.com/drscotthawley/panotti'
